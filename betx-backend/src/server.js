@@ -60,6 +60,20 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Root route (Render / browser health check)
+app.route('/')
+    .get((req, res) => {
+        res.status(200).json({
+            success: true,
+            message: 'BetX Backend is Live 🚀',
+            env: config.NODE_ENV,
+        });
+    })
+    .head((req, res) => {
+        res.status(200).end();
+    });
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // API Routes
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/wallet', require('./routes/wallet.routes'));
