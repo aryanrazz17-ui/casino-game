@@ -4,13 +4,51 @@ import { useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useWallet } from '@/hooks/useWallet'
+import api from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { Wallet, ArrowDownCircle, ArrowUpCircle, History, Bitcoin, Banknote } from 'lucide-react'
 import DepositForm from '@/components/wallet/DepositForm'
+import toast from 'react-hot-toast'
 
 export default function WalletPage() {
     const { wallets, selectedCurrency, selectCurrency } = useWallet()
     const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw' | 'history'>('deposit')
+
+    const [withdrawAmount, setWithdrawAmount] = useState('')
+    const [withdrawDetails, setWithdrawDetails] = useState('')
+    const [isWithdrawing, setIsWithdrawing] = useState(false)
+
+    const handleWithdraw = async () => {
+        if (!withdrawAmount || Number(withdrawAmount) <= 0) {
+            toast.error('Please enter a valid amount')
+            return
+        }
+        if (!withdrawDetails) {
+            toast.error('Please enter withdrawal details')
+            return
+        }
+
+        try {
+            setIsWithdrawing(true)
+            await api.post('/wallet/withdraw', {
+                amount: Number(withdrawAmount),
+                currency: selectedCurrency,
+                method: selectedCurrency === 'INR' ? 'UPI' : 'CRYPTO',
+                details: withdrawDetails
+            })
+
+            toast.success("Withdrawal request submitted for approval!")
+            setWithdrawAmount('')
+            setWithdrawDetails('')
+            // Refresh balance
+            window.location.reload()
+        } catch (error: any) {
+            console.error('Withdrawal error:', error)
+            toast.error(error.response?.data?.message || 'Withdrawal failed')
+        } finally {
+            setIsWithdrawing(false)
+        }
+    }
 
     const currencies = ['INR', 'BTC', 'ETH', 'TRON', 'USDT'] as const
 
@@ -105,11 +143,61 @@ export default function WalletPage() {
                 )}
 
                 {activeTab === 'withdraw' && (
-                    <div className="text-center py-12">
-                        <ArrowUpCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
-                        <h3 className="text-2xl font-bold mb-2">Withdraw Funds</h3>
-                        <p className="text-gray-400 mb-6">Withdraw from your {selectedCurrency} wallet</p>
-                        <Button variant="secondary">Coming Soon</Button>
+                    <div className="py-8 max-w-lg mx-auto">
+                        <div className="text-center mb-8">
+                            <ArrowUpCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+                            <h3 className="text-2xl font-bold mb-2">Withdraw Funds</h3>
+                            <p className="text-gray-400">Withdraw from your {selectedCurrency} wallet</p>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="bg-zinc-800/40 p-4 rounded-xl border border-zinc-800">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-sm text-gray-400">Available Balance</span>
+                                    <span className="text-sm font-bold text-white">
+                                        {formatCurrency(wallets.find(w => w.currency === selectedCurrency)?.availableBalance || 0, selectedCurrency)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-400">Withdrawal Amount</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        value={withdrawAmount}
+                                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-primary-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-400">
+                                    {selectedCurrency === 'INR' ? 'UPI ID / Bank Details' : `${selectedCurrency} Address`}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={withdrawDetails}
+                                    onChange={(e) => setWithdrawDetails(e.target.value)}
+                                    placeholder={selectedCurrency === 'INR' ? 'Enter VPA (e.g. name@upi)' : `Enter ${selectedCurrency} receiver address`}
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-primary-500"
+                                />
+                            </div>
+
+                            <Button
+                                className="w-full py-4 text-lg font-bold bg-zinc-800 hover:bg-zinc-700 border border-zinc-700"
+                                onClick={handleWithdraw}
+                                disabled={isWithdrawing}
+                            >
+                                {isWithdrawing ? 'Processing...' : 'Submit Withdrawal'}
+                            </Button>
+
+                            <p className="text-center text-xs text-gray-500 italic">
+                                * Withdrawals are manually reviewed by admin and may take up to 24 hours.
+                            </p>
+                        </div>
                     </div>
                 )}
 

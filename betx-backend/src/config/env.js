@@ -35,6 +35,11 @@ module.exports = {
   CASHFREE_ENV: process.env.CASHFREE_ENV || 'sandbox',
   CASHFREE_WEBHOOK_SECRET: process.env.CASHFREE_WEBHOOK_SECRET,
 
+  // Razorpay
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
+
   // Tatum
   TATUM_API_KEY: process.env.TATUM_API_KEY,
   TATUM_TESTNET: process.env.TATUM_TESTNET === 'true',

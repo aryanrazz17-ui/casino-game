@@ -35,17 +35,66 @@ export default function DepositForm() {
             setIsLoading(true)
             setError(null)
 
-            // For crypto, we might just fetch the address if not present,
-            // or create a new transaction intent.
-            // Following requirements to call /wallet/deposit
-            const response = await api.post('/wallet/deposit', {
-                currency: selectedCurrency,
-                amount: selectedCurrency === 'INR' ? Number(amount) : undefined
-            })
+            if (selectedCurrency === 'INR') {
+                // Razorpay Flow
+                const response = await api.post('/payment/razorpay/order', {
+                    amount: Number(amount),
+                    currency: 'INR'
+                })
 
-            // Assuming response.data.data contains { address, qrCode, paymentUrl, ... }
-            setDepositData(response.data.data)
-            toast.success(selectedCurrency === 'INR' ? 'Payment link generated' : 'Deposit address generated')
+                const { order_id, key_id, amount: rzpAmount, currency: rzpCurrency, transaction_id } = response.data.data
+
+                const options = {
+                    key: key_id,
+                    amount: rzpAmount, // already in paise from backend
+                    currency: rzpCurrency,
+                    name: "BetX Casino",
+                    description: "Wallet Deposit",
+                    order_id: order_id,
+                    handler: async function (response: any) {
+                        try {
+                            const verifyRes = await api.post('/payment/razorpay/verify', {
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                transaction_id: transaction_id
+                            })
+
+                            if (verifyRes.data.success) {
+                                toast.success("Payment Successful! Balance updated.")
+                                window.location.reload() // Refresh to show new balance
+                            }
+                        } catch (error: any) {
+                            console.error('Verification error:', error)
+                            toast.error(error.response?.data?.message || 'Payment verification failed')
+                        }
+                    },
+                    prefill: {
+                        name: "User", // Ideally take from authStore
+                        email: "user@example.com",
+                        contact: "9999999999" // UPI ke liye contact number zaroori hota hai
+                    },
+                    theme: {
+                        color: "#6366f1",
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            setIsLoading(false)
+                        }
+                    }
+                }
+
+                const rzp1 = new (window as any).Razorpay(options)
+                rzp1.open()
+            } else {
+                // Crypto Flow
+                const response = await api.post('/wallet/deposit/initiate', {
+                    currency: selectedCurrency,
+                    paymentMethod: 'crypto'
+                })
+                setDepositData(response.data.data)
+                toast.success('Deposit address generated')
+            }
 
         } catch (error: any) {
             console.error('Deposit error:', error)
@@ -73,8 +122,8 @@ export default function DepositForm() {
                             key={currency}
                             onClick={() => selectCurrency(currency)}
                             className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${selectedCurrency === currency
-                                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20'
-                                    : 'bg-zinc-900 text-gray-400 hover:bg-zinc-800'
+                                ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20'
+                                : 'bg-zinc-900 text-gray-400 hover:bg-zinc-800'
                                 }`}
                         >
                             {/* Icons could be added here */}
