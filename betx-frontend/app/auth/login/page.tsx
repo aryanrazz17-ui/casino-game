@@ -20,7 +20,14 @@ export default function LoginPage() {
 
         try {
             await login(formData.identifier, formData.password)
-            router.push('/games')
+
+            // Get current user to check role
+            const user = useAuthStore.getState().user
+            if (user?.role === 'admin') {
+                router.push('/admin')
+            } else {
+                router.push('/games')
+            }
         } catch (error) {
             console.error('Login error:', error)
         }

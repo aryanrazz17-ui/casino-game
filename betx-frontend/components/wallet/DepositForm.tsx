@@ -4,17 +4,22 @@ import { useState, useEffect } from 'react'
 import { useWalletStore } from '@/store/walletStore'
 import api from '@/lib/api'
 import { Button } from '@/components/ui/Button'
-import { Copy, RefreshCw, CheckCircle, AlertCircle, ArrowRight, Wallet } from 'lucide-react'
+import { Copy, RefreshCw, CheckCircle, AlertCircle, ArrowRight, Wallet, IndianRupee } from 'lucide-react'
 import toast from 'react-hot-toast'
-import Image from 'next/image'
 import { Card } from '@/components/ui/Card'
 
 export default function DepositForm() {
-    const { selectedCurrency, selectCurrency, wallets } = useWalletStore()
+    const { selectedCurrency, selectCurrency } = useWalletStore()
     const [amount, setAmount] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [depositData, setDepositData] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
+
+    // Manual Payment State
+    const [activeMethods, setActiveMethods] = useState<any[]>([])
+    const [selectedMethod, setSelectedMethod] = useState<any>(null)
+    const [utr, setUtr] = useState('')
+    const [submittingUtr, setSubmittingUtr] = useState(false)
 
     const currencies = ['INR', 'BTC', 'ETH', 'TRON', 'USDT'] as const
 
@@ -23,7 +28,22 @@ export default function DepositForm() {
         setDepositData(null)
         setAmount('')
         setError(null)
+        setSelectedMethod(null)
+        setUtr('')
+
+        if (selectedCurrency === 'INR') {
+            fetchMethods()
+        }
     }, [selectedCurrency])
+
+    const fetchMethods = async () => {
+        try {
+            const response = await api.get('/payment/methods')
+            setActiveMethods(response.data.data)
+        } catch (error) {
+            console.error('Failed to fetch payment methods', error)
+        }
+    }
 
     const handleGenerateDeposit = async () => {
         if (selectedCurrency === 'INR' && (!amount || Number(amount) <= 0)) {
@@ -46,7 +66,7 @@ export default function DepositForm() {
 
                 const options = {
                     key: key_id,
-                    amount: rzpAmount, // already in paise from backend
+                    amount: rzpAmount,
                     currency: rzpCurrency,
                     name: "BetX Casino",
                     description: "Wallet Deposit",
@@ -61,27 +81,19 @@ export default function DepositForm() {
                             })
 
                             if (verifyRes.data.success) {
-                                toast.success("Payment Successful! Balance updated.")
-                                window.location.reload() // Refresh to show new balance
+                                toast.success("Payment Successful!")
+                                window.location.reload()
                             }
                         } catch (error: any) {
-                            console.error('Verification error:', error)
-                            toast.error(error.response?.data?.message || 'Payment verification failed')
+                            toast.error(error.response?.data?.message || 'Verification failed')
                         }
                     },
                     prefill: {
-                        name: "User", // Ideally take from authStore
+                        name: "User",
                         email: "user@example.com",
-                        contact: "9999999999" // UPI ke liye contact number zaroori hota hai
                     },
-                    theme: {
-                        color: "#6366f1",
-                    },
-                    modal: {
-                        ondismiss: function () {
-                            setIsLoading(false)
-                        }
-                    }
+                    theme: { color: "#6366f1" },
+                    modal: { ondismiss: () => setIsLoading(false) }
                 }
 
                 const rzp1 = new (window as any).Razorpay(options)
@@ -97,7 +109,6 @@ export default function DepositForm() {
             }
 
         } catch (error: any) {
-            console.error('Deposit error:', error)
             const msg = error.response?.data?.message || 'Failed to initiate deposit'
             setError(msg)
             toast.error(msg)
@@ -106,14 +117,33 @@ export default function DepositForm() {
         }
     }
 
+    const handleManualSubmit = async () => {
+        if (!amount || !utr) return toast.error('Please enter amount and UTR');
+        try {
+            setSubmittingUtr(true)
+            await api.post('/wallet/deposit/manual', {
+                amount: Number(amount),
+                currency: 'INR',
+                paymentMethod: selectedMethod.name,
+                utr: utr
+            })
+            toast.success('Deposit request submitted!')
+            setDepositData({ success: true, manual: true })
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Submission failed')
+        } finally {
+            setSubmittingUtr(false)
+        }
+    }
+
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text)
-        toast.success('Copied to clipboard!')
+        toast.success('Copied!')
     }
 
     return (
         <div className="max-w-2xl mx-auto space-y-8">
-            {/* Currency Selection - redundant if parent has it, but requested in requirements */}
+            {/* Currency Selection */}
             <div className="space-y-4">
                 <label className="text-sm text-gray-400 font-medium">Select Currency</label>
                 <div className="flex flex-wrap gap-2">
@@ -122,33 +152,15 @@ export default function DepositForm() {
                             key={currency}
                             onClick={() => selectCurrency(currency)}
                             className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${selectedCurrency === currency
-                                ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20'
+                                ? 'bg-primary-600 text-white'
                                 : 'bg-zinc-900 text-gray-400 hover:bg-zinc-800'
                                 }`}
                         >
-                            {/* Icons could be added here */}
                             {currency}
                         </button>
                     ))}
                 </div>
             </div>
-
-            {/* Amount Input (Only for INR usually, but maybe for crypto tracking too?) */}
-            {selectedCurrency === 'INR' && (
-                <div className="space-y-2">
-                    <label className="text-sm text-gray-400 font-medium">Deposit Amount (INR)</label>
-                    <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                        <input
-                            type="number"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            placeholder="Enter amount (e.g. 500)"
-                            className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:border-primary-500 transition-colors"
-                        />
-                    </div>
-                </div>
-            )}
 
             {/* Error Message */}
             {error && (
@@ -158,118 +170,175 @@ export default function DepositForm() {
                 </div>
             )}
 
-            {/* Generate Button */}
-            {!depositData && (
-                <Button
-                    onClick={handleGenerateDeposit}
-                    disabled={isLoading}
-                    className="w-full py-4 text-lg font-bold bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-500 hover:to-purple-500 shadow-xl"
-                >
-                    {isLoading ? (
-                        <span className="flex items-center gap-2">
-                            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                            Processing...
-                        </span>
-                    ) : (
-                        <span className="flex items-center justify-center gap-2">
-                            {selectedCurrency === 'INR' ? 'Proceed to Pay' : 'Generate Address'}
-                            <ArrowRight size={20} />
-                        </span>
-                    )}
-                </Button>
-            )}
-
-            {/* Deposit Info / QR Code */}
-            {depositData && (
-                <Card className="bg-zinc-900/50 border-zinc-800 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-bold flex items-center gap-2">
-                                <CheckCircle className="text-green-500" size={24} />
-                                Deposit Details
-                            </h3>
-                            <button
-                                onClick={() => setDepositData(null)}
-                                className="text-sm text-gray-500 hover:text-white flex items-center gap-1"
-                            >
-                                <RefreshCw size={14} /> New Deposit
-                            </button>
-                        </div>
-
-                        {selectedCurrency === 'INR' ? (
-                            <div className="text-center space-y-4">
-                                <p className="text-gray-400">Scan QR or use UPI ID to pay</p>
-                                {/* Accessing qrCode and vpa from response data */}
-                                {depositData.qrCode && (
-                                    <div className="bg-white p-4 rounded-xl inline-block">
-                                        {/* Fallback if backend sends raw base64 or URL */}
-                                        <img
-                                            src={depositData.qrCode}
-                                            alt="Payment QR"
-                                            className="w-48 h-48 object-contain"
-                                        />
-                                    </div>
-                                )}
-                                {depositData.paymentUrl && (
-                                    <div className="mt-4">
-                                        <a
-                                            href={depositData.paymentUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-block px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-bold transition-colors"
-                                        >
-                                            Pay Now
-                                        </a>
-                                    </div>
-                                )}
+            {/* Main Content Area */}
+            {!depositData ? (
+                <div className="space-y-8">
+                    {selectedCurrency === 'INR' && activeMethods.length > 0 && (
+                        <div className="space-y-4">
+                            <label className="text-sm text-gray-400 font-medium tracking-wide uppercase text-[10px]">Fast UPI Transfer (Manual Verification)</label>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {activeMethods.map((method) => (
+                                    <button
+                                        key={method.id}
+                                        onClick={() => setSelectedMethod(method)}
+                                        className={`p-4 rounded-xl border transition-all text-center space-y-2 ${selectedMethod?.id === method.id
+                                            ? 'bg-primary-600/10 border-primary-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.1)]'
+                                            : 'bg-zinc-900/50 border-zinc-800 text-gray-400 hover:border-zinc-700'
+                                            }`}
+                                    >
+                                        <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto transition-colors">
+                                            <IndianRupee size={20} className={selectedMethod?.id === method.id ? 'text-primary-400' : 'text-gray-500'} />
+                                        </div>
+                                        <p className="text-sm font-bold">{method.name}</p>
+                                    </button>
+                                ))}
                             </div>
-                        ) : (
-                            <div className="flex flex-col items-center space-y-6">
-                                <p className="text-gray-400 text-center text-sm">
-                                    Send only <strong className="text-primary-400">{selectedCurrency}</strong> to this address.
-                                    Sending any other coin may result in permanent loss.
-                                </p>
+                        </div>
+                    )}
 
-                                {/* Crypto QR */}
-                                <div className="bg-white p-4 rounded-xl">
-                                    <img
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${depositData.address}`}
-                                        alt="Wallet Address QR"
-                                        width={200}
-                                        height={200}
-                                    />
+                    {selectedCurrency === 'INR' && selectedMethod ? (
+                        <div className="glass p-6 rounded-2xl border border-primary-500/20 space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="flex flex-col items-center text-center space-y-4">
+                                <div className="bg-white p-3 rounded-xl shadow-2xl">
+                                    <img src={selectedMethod.qr_image_url} alt="QR Code" className="w-48 h-48 object-contain" />
                                 </div>
-
-                                {/* Address Display */}
-                                <div className="w-full space-y-2">
-                                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Deposit Address</label>
-                                    <div className="flex items-center gap-2 bg-black/40 border border-zinc-800 p-3 rounded-lg group hover:border-zinc-700 transition-colors">
-                                        <code className="flex-1 text-sm font-mono text-zinc-300 break-all">
-                                            {depositData.address}
-                                        </code>
-                                        <button
-                                            onClick={() => copyToClipboard(depositData.address)}
-                                            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
-                                            title="Copy Address"
-                                        >
-                                            <Copy size={18} />
+                                <div>
+                                    <p className="text-gray-400 text-sm mb-1">Scan QR or Pay to UPI ID</p>
+                                    <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-lg border border-white/5">
+                                        <code className="text-primary-400 font-bold">{selectedMethod.upi_id}</code>
+                                        <button onClick={() => copyToClipboard(selectedMethod.upi_id)} className="text-gray-500 hover:text-white">
+                                            <Copy size={14} />
                                         </button>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="flex w-full gap-4 text-sm text-gray-500 bg-zinc-900/50 p-4 rounded-lg">
-                                    <div className="flex-1 text-center border-r border-zinc-800">
-                                        <p className="mb-1">Minimum Deposit</p>
-                                        <p className="font-bold text-white">0.001 {selectedCurrency}</p>
-                                    </div>
-                                    <div className="flex-1 text-center">
-                                        <p className="mb-1">Expected Time</p>
-                                        <p className="font-bold text-white">~3 Confirmations</p>
+                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                <div className="space-y-2">
+                                    <label className="text-sm text-gray-400 font-medium">1. Deposit Amount</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                        <input
+                                            type="number"
+                                            value={amount}
+                                            onChange={(e) => setAmount(e.target.value)}
+                                            placeholder="Enter amount"
+                                            className="w-full bg-black/20 border border-zinc-800 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:border-primary-500"
+                                        />
                                     </div>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm text-gray-400 font-medium">2. Transaction ID / UTR</label>
+                                    <input
+                                        type="text"
+                                        value={utr}
+                                        onChange={(e) => setUtr(e.target.value)}
+                                        placeholder="12-digit UTR number"
+                                        className="w-full bg-black/20 border border-zinc-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-primary-500"
+                                    />
+                                </div>
+
+                                <Button
+                                    onClick={handleManualSubmit}
+                                    disabled={submittingUtr}
+                                    className="w-full py-4 bg-primary-600 hover:bg-primary-700"
+                                >
+                                    {submittingUtr ? 'Submitting...' : 'Confirm Deposit'}
+                                </Button>
+
+                                <button
+                                    onClick={() => setSelectedMethod(null)}
+                                    className="w-full text-xs text-gray-500 hover:text-white transition-colors"
+                                >
+                                    Cancel and try another method
+                                </button>
                             </div>
-                        )}
-                    </div>
+
+                            <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl space-y-2 text-xs">
+                                <p className="text-yellow-500 font-bold flex items-center gap-1"><AlertCircle size={14} /> WARNING</p>
+                                <p className="text-gray-500 leading-relaxed">
+                                    After payment, you must enter the 12-digit UTR number. Incorrect UTR will lead to rejected deposits. Verification takes 15-30 mins.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {selectedCurrency === 'INR' && (
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-sm text-gray-400 font-medium">Deposit Amount (INR)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                            <input
+                                                type="number"
+                                                value={amount}
+                                                onChange={(e) => setAmount(e.target.value)}
+                                                placeholder="Enter amount"
+                                                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:border-primary-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="relative py-4">
+                                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
+                                        <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0a0a0f] px-2 text-gray-500">Insta-Deposit Gateway</span></div>
+                                    </div>
+                                </>
+                            )}
+
+                            <Button
+                                onClick={handleGenerateDeposit}
+                                disabled={isLoading}
+                                className="w-full py-4 text-lg font-bold bg-gradient-to-r from-primary-600 to-purple-600 shadow-xl"
+                            >
+                                {isLoading ? 'Processing...' : selectedCurrency === 'INR' ? 'Pay with Razorpay' : 'Generate Address'}
+                                {!isLoading && <ArrowRight className="ml-2" size={20} />}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* Success or Deposit Data View */
+                <Card className="bg-zinc-900/50 border-zinc-800 p-8 text-center animate-in zoom-in duration-300">
+                    {depositData.success ? (
+                        <div className="space-y-6">
+                            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                                <CheckCircle className="text-green-500" size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold">Request Submitted</h3>
+                                <p className="text-gray-400 mt-2">Your deposit of ₹{amount} is being verified.</p>
+                            </div>
+                            <Button onClick={() => window.location.reload()} className="bg-white/5 hover:bg-white/10 px-8">
+                                Back to Wallet
+                            </Button>
+                        </div>
+                    ) : (
+                        /* Crypto Deposit Info */
+                        <div className="space-y-6 text-left">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xl font-bold">Deposit {selectedCurrency}</h3>
+                                <button onClick={() => setDepositData(null)} className="text-xs text-gray-500 hover:text-white">New Deposit</button>
+                            </div>
+                            <div className="flex flex-col items-center gap-6">
+                                <div className="bg-white p-4 rounded-xl">
+                                    <img
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${depositData.address}`}
+                                        alt="QR"
+                                        className="w-40 h-40"
+                                    />
+                                </div>
+                                <div className="w-full space-y-2">
+                                    <label className="text-[10px] text-gray-500 uppercase font-black">Address</label>
+                                    <div className="flex items-center gap-2 bg-black/40 p-3 rounded-lg border border-white/5">
+                                        <code className="flex-1 text-sm font-mono break-all text-primary-300">{depositData.address}</code>
+                                        <button onClick={() => copyToClipboard(depositData.address)} className="text-gray-500 hover:text-white"><Copy size={16} /></button>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-center text-gray-500">Wait for ~3 network confirmations. Balance will update automatically.</p>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             )}
         </div>

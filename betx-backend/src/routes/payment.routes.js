@@ -4,7 +4,8 @@ const { protect } = require('../middleware/auth');
 const {
     createOrder,
     verifyPayment,
-    handleWebhook
+    handleWebhook,
+    getActivePaymentMethods
 } = require('../controllers/paymentController');
 
 // Razorpay Routes
@@ -22,5 +23,6 @@ router.use(protect);
 
 router.post('/razorpay/order', createOrder);
 router.post('/razorpay/verify', verifyPayment);
+router.get('/methods', getActivePaymentMethods);
 
 module.exports = router;

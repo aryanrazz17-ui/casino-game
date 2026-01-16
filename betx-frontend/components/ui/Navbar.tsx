@@ -16,6 +16,7 @@ export function Navbar() {
 
     const navLinks = [
         { href: '/games', label: 'Games' },
+        ...(user?.role === 'admin' ? [{ href: '/admin', label: 'Admin' }] : []),
         { href: '/wallet', label: 'Wallet' },
         { href: '/profile', label: 'Profile' },
     ]
@@ -38,8 +39,8 @@ export function Navbar() {
                                 key={link.href}
                                 href={link.href}
                                 className={`px-3 py-2 rounded-lg transition-colors ${pathname.startsWith(link.href)
-                                        ? 'bg-primary-600 text-white'
-                                        : 'text-gray-300 hover:bg-white/5'
+                                    ? 'bg-primary-600 text-white'
+                                    : 'text-gray-300 hover:bg-white/5'
                                     }`}
                             >
                                 {link.label}
@@ -88,8 +89,8 @@ export function Navbar() {
                                 href={link.href}
                                 onClick={() => setMobileMenuOpen(false)}
                                 className={`block px-3 py-2 rounded-lg ${pathname.startsWith(link.href)
-                                        ? 'bg-primary-600 text-white'
-                                        : 'text-gray-300 hover:bg-white/5'
+                                    ? 'bg-primary-600 text-white'
+                                    : 'text-gray-300 hover:bg-white/5'
                                     }`}
                             >
                                 {link.label}

@@ -237,3 +237,22 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
 
     res.status(200).json({ status: 'ok' });
 });
+/**
+ * @desc    Get All Active Payment Methods (UPI/QR)
+ * @route   GET /api/payment/methods
+ * @access  Private
+ */
+exports.getActivePaymentMethods = asyncHandler(async (req, res, next) => {
+    const { data, error } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+    if (error) throw new AppError(error.message, 500);
+
+    res.status(200).json({
+        success: true,
+        data
+    });
+});

@@ -105,6 +105,55 @@ exports.initiateDeposit = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * @route   POST /api/wallet/deposit/manual
+ * @desc    Submit manual deposit request (UPI/UTR)
+ * @access  Private
+ */
+exports.submitManualDeposit = asyncHandler(async (req, res, next) => {
+    const { amount, currency = 'INR', paymentMethod, utr } = req.body;
+
+    if (!amount || amount <= 0 || !utr) {
+        return next(new AppError('Invalid deposit details. Amount and UTR required.', 400));
+    }
+
+    // Get or create wallet
+    let wallet = await WalletService.getOrCreateWallet(req.user.id, currency);
+
+    // Create pending transaction
+    const { data: transaction, error: txError } = await supabase
+        .from('transactions')
+        .insert({
+            user_id: req.user.id,
+            type: 'deposit',
+            currency,
+            amount,
+            status: 'pending',
+            payment_method: paymentMethod,
+            payment_gateway: 'manual_upi',
+            balance_before: wallet.balance,
+            metadata: {
+                utr: utr,
+                manual_request: true,
+                submitted_at: new Date()
+            },
+        })
+        .select()
+        .single();
+
+    if (txError) throw new AppError(txError.message, 500);
+
+    logger.info(`Manual deposit request: ${req.user.username} - ${amount} ${currency} - UTR: ${utr}`);
+
+    res.status(200).json({
+        success: true,
+        message: 'Deposit request submitted for verification',
+        data: {
+            transactionId: transaction.id
+        }
+    });
+});
+
+/**
  * @route   POST /api/wallet/withdraw
  * @desc    Request withdrawal
  * @access  Private

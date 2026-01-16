@@ -298,7 +298,57 @@ exports.updateWithdrawal = asyncHandler(async (req, res, next) => {
         }
     }
 
-    res.status(200).json({ success: true, message: `Withdrawal ${action}ed` });
+    res.status(200).json({
+        success: true,
+        message: `Withdrawal ${action}ed successfully`
+    });
+});
+
+/**
+ * @route   PUT /api/admin/deposits/:id
+ * @desc    Approve or reject manual deposit
+ * @access  Private (Admin)
+ */
+exports.updateDeposit = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { action, notes } = req.body;
+
+    const { data: tx } = await supabase.from('transactions').select('*').eq('id', id).single();
+    if (!tx) return next(new AppError('Transaction not found', 404));
+
+    if (tx.status !== 'pending' || tx.type !== 'deposit') {
+        return next(new AppError('Invalid transaction or already processed', 400));
+    }
+
+    if (tx.payment_gateway !== 'manual_upi') {
+        return next(new AppError('Only manual UPI deposits can be verified via this endpoint', 400));
+    }
+
+    if (action === 'approve') {
+        // Credit the wallet
+        const wallet = await WalletService.credit(tx.user_id, tx.amount, tx.currency);
+
+        const { error } = await supabase.from('transactions').update({
+            status: 'completed',
+            balance_after: wallet.balance,
+            metadata: { ...tx.metadata, notes, approvedAt: new Date() }
+        }).eq('id', id);
+
+        if (error) throw new AppError(error.message, 500);
+
+    } else if (action === 'reject') {
+        const { error } = await supabase.from('transactions').update({
+            status: 'failed',
+            metadata: { ...tx.metadata, notes, rejectedAt: new Date() }
+        }).eq('id', id);
+
+        if (error) throw new AppError(error.message, 500);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: `Deposit ${action}ed successfully`
+    });
 });
 
 /**
@@ -307,18 +357,38 @@ exports.updateWithdrawal = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 exports.getGames = asyncHandler(async (req, res, next) => {
-    const { page = 1, limit = 20, gameType, userId } = req.query;
+    const { page = 1, limit = 20, gameType, userId, isWin, startDate, endDate, search } = req.query;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
     let query = supabase
         .from('games')
-        .select('*, user:users(username)', { count: 'exact' })
+        .select('*, user:users!inner(username, email)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
 
-    if (gameType) query = query.eq('game_type', gameType);
+    if (gameType && gameType !== 'all') query = query.eq('game_type', gameType);
     if (userId) query = query.eq('user_id', userId);
+
+    if (isWin !== undefined && isWin !== 'all') {
+        query = query.eq('is_win', isWin === 'true');
+    }
+
+    if (startDate) {
+        query = query.gte('created_at', new Date(startDate).toISOString());
+    }
+
+    if (endDate) {
+        // Add one day to include the full end date
+        const end = new Date(endDate);
+        end.setDate(end.getDate() + 1);
+        query = query.lt('created_at', end.toISOString());
+    }
+
+    if (search) {
+        // Search by username or email via join
+        query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`, { foreignTable: 'users' });
+    }
 
     const { data, count, error } = await query;
     if (error) throw new AppError(error.message, 500);
@@ -456,5 +526,102 @@ exports.deleteQR = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: 'QR deleted successfully'
+    });
+});
+/**
+ * @route   GET /api/admin/payment-methods
+ * @desc    Get all payment methods
+ * @access  Private (Admin)
+ */
+exports.getAdminPaymentMethods = asyncHandler(async (req, res, next) => {
+    const { data, error } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) throw new AppError(error.message, 500);
+
+    res.status(200).json({
+        success: true,
+        data
+    });
+});
+
+/**
+ * @route   POST /api/admin/payment-methods
+ * @desc    Add new payment method
+ * @access  Private (Admin)
+ */
+exports.addPaymentMethod = asyncHandler(async (req, res, next) => {
+    const { name, upiId, qrImageUrl } = req.body;
+
+    const { data, error } = await supabase
+        .from('payment_methods')
+        .insert({
+            name,
+            upi_id: upiId,
+            qr_image_url: qrImageUrl
+        })
+        .select()
+        .single();
+
+    if (error) throw new AppError(error.message, 500);
+
+    res.status(201).json({
+        success: true,
+        message: 'Payment method added successfully',
+        data
+    });
+});
+
+/**
+ * @route   PUT /api/admin/payment-methods/:id
+ * @desc    Update payment method (status, etc)
+ * @access  Private (Admin)
+ */
+exports.updatePaymentMethod = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { name, upiId, qrImageUrl, isActive } = req.body;
+
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (upiId !== undefined) updates.upi_id = upiId;
+    if (qrImageUrl !== undefined) updates.qr_image_url = qrImageUrl;
+    if (isActive !== undefined) updates.is_active = isActive;
+
+    const { data, error } = await supabase
+        .from('payment_methods')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+    if (error) throw new AppError(error.message, 500);
+
+    res.status(200).json({
+        success: true,
+        message: 'Payment method updated successfully',
+        data
+    });
+});
+
+/**
+ * @route   DELETE /api/admin/payment-methods/:id
+ * @desc    Delete payment method
+ * @access  Private (Admin)
+ */
+exports.deletePaymentMethod = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+
+    const { error } = await supabase
+        .from('payment_methods')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new AppError(error.message, 500);
+
+    res.status(200).json({
+        success: true,
+        message: 'Payment method deleted successfully'
     });
 });

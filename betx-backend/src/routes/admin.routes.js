@@ -10,12 +10,17 @@ const {
     adjustUserBalance,
     getTransactions,
     updateWithdrawal,
+    updateDeposit,
     getGames,
     getLeaderboard,
     uploadQR,
     getQRs,
     updateQR,
     deleteQR,
+    getAdminPaymentMethods,
+    addPaymentMethod,
+    updatePaymentMethod,
+    deletePaymentMethod,
 } = require('../controllers/adminController');
 
 // All routes require admin authentication
@@ -36,6 +41,8 @@ router.post('/users/:id/adjust-balance', adjustUserBalance);
 // Transaction Management
 router.get('/transactions', getTransactions);
 router.put('/withdrawals/:id', updateWithdrawal);
+router.put('/deposits/:id', updateDeposit);
+
 
 // Game Monitoring
 router.get('/games', getGames);
@@ -45,5 +52,11 @@ router.post('/qr/upload', uploadQR);
 router.get('/qr', getQRs);
 router.put('/qr/:id', updateQR);
 router.delete('/qr/:id', deleteQR);
+
+// Dynamic Payment Methods
+router.get('/payment-methods', getAdminPaymentMethods);
+router.post('/payment-methods', addPaymentMethod);
+router.put('/payment-methods/:id', updatePaymentMethod);
+router.delete('/payment-methods/:id', deletePaymentMethod);
 
 module.exports = router;

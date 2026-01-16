@@ -6,6 +6,7 @@ const { withdrawalLimiter } = require('../middleware/rateLimit');
 const {
     getBalance,
     initiateDeposit,
+    submitManualDeposit,
     requestWithdrawal,
     getTransactions,
     createCryptoWallet,
@@ -20,6 +21,7 @@ router.get('/balance', getBalance);
 
 // Deposit
 router.post('/deposit/initiate', initiateDeposit);
+router.post('/deposit/manual', submitManualDeposit);
 
 // Withdrawal
 router.post('/withdraw', withdrawalLimiter, validateWithdrawal, requestWithdrawal);
