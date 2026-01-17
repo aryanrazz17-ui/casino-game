@@ -211,31 +211,37 @@ exports.adjustUserBalance = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 exports.getTransactions = asyncHandler(async (req, res, next) => {
-    const { page = 1, limit = 20, type, status, currency, userId } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const { type, status, currency, userId } = req.query;
+
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
     let query = supabase
         .from('transactions')
-        .select('*, user:users(username, email)', { count: 'exact' })
+        .select('*, user:users!user_id(username, email)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
 
-    if (type) query = query.eq('type', type);
-    if (status) query = query.eq('status', status);
+    if (type && type !== 'all') query = query.eq('type', type);
+    if (status && status !== 'all') query = query.eq('status', status);
     if (currency) query = query.eq('currency', currency);
     if (userId) query = query.eq('user_id', userId);
 
     const { data, count, error } = await query;
-    if (error) throw new AppError(error.message, 500);
+    if (error) {
+        logger.error('Database error in getTransactions:', error);
+        throw new AppError(error.message, 500);
+    }
 
     res.status(200).json({
         success: true,
         data: {
-            transactions: data,
-            total: count,
-            totalPages: Math.ceil(count / limit),
-            currentPage: parseInt(page)
+            transactions: data || [],
+            total: count || 0,
+            totalPages: Math.ceil((count || 0) / limit),
+            currentPage: page
         }
     });
 });
@@ -313,43 +319,98 @@ exports.updateWithdrawal = asyncHandler(async (req, res, next) => {
 exports.updateDeposit = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const { action, notes } = req.body;
+    const io = req.app.get('io');
 
     const { data: tx } = await supabase.from('transactions').select('*').eq('id', id).single();
     if (!tx) return next(new AppError('Transaction not found', 404));
 
     if (tx.status !== 'pending' || tx.type !== 'deposit') {
-        return next(new AppError('Invalid transaction or already processed', 400));
-    }
-
-    if (tx.payment_gateway !== 'manual_upi') {
-        return next(new AppError('Only manual UPI deposits can be verified via this endpoint', 400));
+        return next(new AppError('This transaction is not a pending deposit or has already been processed', 400));
     }
 
     if (action === 'approve') {
-        // Credit the wallet
+        // 1. Ensure the user has provided essential verification info
+        // We check for UTR/Transaction ID in metadata
+        if (!tx.metadata?.utr && !tx.gateway_transaction_id) {
+            return next(new AppError('Verification failed: Transaction ID (UTR) is missing from the request', 400));
+        }
+
+        // 2. Proof of payment check (Image)
+        const hasImage = tx.metadata?.transaction_image || tx.metadata?.proof_image;
+        if (!hasImage) {
+            return next(new AppError('Verification failed: No transaction proof image found. User must upload a screenshot.', 400));
+        }
+
+        // 3. Credit the wallet
         const wallet = await WalletService.credit(tx.user_id, tx.amount, tx.currency);
 
+        // 4. Update the transaction record
         const { error } = await supabase.from('transactions').update({
             status: 'completed',
             balance_after: wallet.balance,
-            metadata: { ...tx.metadata, notes, approvedAt: new Date() }
+            processed_at: new Date(),
+            metadata: {
+                ...tx.metadata,
+                notes,
+                approvedAt: new Date(),
+                verifiedBy: 'admin'
+            }
         }).eq('id', id);
 
-        if (error) throw new AppError(error.message, 500);
+        if (error) {
+            logger.error('Error updating transaction after credit:', error);
+            throw new AppError('Wallet credited but transaction log update failed', 500);
+        }
+
+        // 5. Real-time Notification via Socket.IO
+        if (io) {
+            io.to(`user:${tx.user_id}`).emit('wallet_update', {
+                type: 'deposit_approved',
+                message: `Success! Your deposit of ${tx.amount} ${tx.currency} has been credited to your wallet.`,
+                amount: tx.amount,
+                currency: tx.currency,
+                newBalance: wallet.balance,
+                transactionId: tx.id
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Deposit verified and wallet credited successfully',
+            data: {
+                transactionId: tx.id,
+                amount: tx.amount,
+                currency: tx.currency,
+                newBalance: wallet.balance
+            }
+        });
 
     } else if (action === 'reject') {
         const { error } = await supabase.from('transactions').update({
             status: 'failed',
-            metadata: { ...tx.metadata, notes, rejectedAt: new Date() }
+            metadata: {
+                ...tx.metadata,
+                notes,
+                rejectedAt: new Date()
+            }
         }).eq('id', id);
 
         if (error) throw new AppError(error.message, 500);
-    }
 
-    res.status(200).json({
-        success: true,
-        message: `Deposit ${action}ed successfully`
-    });
+        // Notify rejection
+        if (io) {
+            io.to(`user:${tx.user_id}`).emit('notification', {
+                type: 'deposit_rejected',
+                message: `Your deposit request for ${tx.amount} ${tx.currency} was rejected. Reason: ${notes || 'Verification failed'}`,
+                severity: 'error'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Deposit request rejected'
+        });
+    }
 });
 
 /**

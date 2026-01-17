@@ -21,6 +21,9 @@ export default function DepositForm() {
     const [utr, setUtr] = useState('')
     const [submittingUtr, setSubmittingUtr] = useState(false)
 
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
     const currencies = ['INR', 'BTC', 'ETH', 'TRON', 'USDT'] as const
 
     // Clear data when currency changes
@@ -30,6 +33,8 @@ export default function DepositForm() {
         setError(null)
         setSelectedMethod(null)
         setUtr('')
+        setSelectedFile(null)
+        setPreviewUrl(null)
 
         if (selectedCurrency === 'INR') {
             fetchMethods()
@@ -42,6 +47,22 @@ export default function DepositForm() {
             setActiveMethods(response.data.data)
         } catch (error) {
             console.error('Failed to fetch payment methods', error)
+        }
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('File too large (max 5MB)')
+                return
+            }
+            setSelectedFile(file)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result as string)
+            }
+            reader.readAsDataURL(file)
         }
     }
 
@@ -74,16 +95,22 @@ export default function DepositForm() {
 
     const handleManualSubmit = async () => {
         if (!amount || !utr) return toast.error('Please enter amount and UTR');
+        if (!selectedFile) return toast.error('Please upload payment screenshot');
         if (Number(amount) < 100) return toast.error('Minimum deposit is ₹100');
 
         try {
             setSubmittingUtr(true)
-            await api.post('/wallet/deposit/manual', {
-                amount: Number(amount),
-                currency: 'INR',
-                paymentMethod: selectedMethod.name,
-                utr: utr
+            const formData = new FormData()
+            formData.append('amount', amount)
+            formData.append('currency', 'INR')
+            formData.append('paymentMethod', selectedMethod.name)
+            formData.append('utr', utr)
+            formData.append('screenshot', selectedFile)
+
+            await api.post('/wallet/deposit/manual', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             })
+
             toast.success('Deposit request submitted!')
             setDepositData({ success: true, manual: true })
         } catch (error: any) {
@@ -204,9 +231,39 @@ export default function DepositForm() {
                                                     />
                                                 </div>
 
+                                                <div className="space-y-2">
+                                                    <label className="text-sm text-gray-400 font-medium">3. Upload Proof (Screenshot)</label>
+                                                    <div className="relative group">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={handleFileChange}
+                                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                        />
+                                                        <div className={`p-8 border-2 border-dashed rounded-xl transition-all flex flex-col items-center gap-2 ${previewUrl ? 'border-primary-500/50 bg-primary-500/5' : 'border-zinc-800 hover:border-zinc-700 bg-white/5'}`}>
+                                                            {previewUrl ? (
+                                                                <div className="relative w-full aspect-video md:aspect-auto md:h-32 mb-2">
+                                                                    <img src={previewUrl} alt="Preview" className="w-full h-full object-contain rounded-lg shadow-xl" />
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                                                                        <RefreshCw size={24} className="text-white" />
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-1">
+                                                                        <Copy size={24} className="text-gray-500" />
+                                                                    </div>
+                                                                    <p className="text-sm text-gray-400">Click to upload or drag & drop</p>
+                                                                    <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">PNG, JPG up to 5MB</p>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                                 <Button
                                                     onClick={handleManualSubmit}
-                                                    disabled={submittingUtr || !amount || !utr}
+                                                    disabled={submittingUtr || !amount || !utr || !selectedFile}
                                                     className="w-full py-4 bg-primary-600 hover:bg-primary-700 shadow-lg shadow-primary-600/20"
                                                 >
                                                     {submittingUtr ? 'Submitting...' : 'Confirm Deposit'}
@@ -225,8 +282,8 @@ export default function DepositForm() {
                                                 <p className="text-gray-500 leading-relaxed">
                                                     1. Make payment to the UPI ID above.<br />
                                                     2. Copy the 12-digit UTR/Ref number from your payment app.<br />
-                                                    3. Paste it here and click Confirm.<br />
-                                                    4. Funds will be added to your wallet within 15-30 mins after verification.
+                                                    3. Upload a screenshot of the successful transaction.<br />
+                                                    4. Paste UTR and click Confirm. Verification takes 15-30 mins.
                                                 </p>
                                             </div>
                                         </div>

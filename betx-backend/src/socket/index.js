@@ -31,10 +31,23 @@ module.exports = (io) => {
     const slotsNamespace = io.of('/slots');
     const coinflipNamespace = io.of('/coinflip');
     const wheelNamespace = io.of('/wheel');
+    const kenoNamespace = io.of('/keno');
+    const aviatorNamespace = io.of('/aviator');
     const chatNamespace = io.of('/chat');
 
     // Apply auth to all namespaces
-    [diceNamespace, crashNamespace, minesNamespace, plinkoNamespace, slotsNamespace, coinflipNamespace, wheelNamespace, chatNamespace].forEach(
+    [
+        diceNamespace,
+        crashNamespace,
+        minesNamespace,
+        plinkoNamespace,
+        slotsNamespace,
+        coinflipNamespace,
+        wheelNamespace,
+        kenoNamespace,
+        aviatorNamespace,
+        chatNamespace
+    ].forEach(
         (namespace) => {
             namespace.use(socketAuth);
         }
@@ -48,6 +61,8 @@ module.exports = (io) => {
     require('./namespaces/slots')(slotsNamespace);
     require('./namespaces/coinflip')(coinflipNamespace);
     require('./namespaces/wheel')(wheelNamespace);
+    require('./namespaces/keno')(kenoNamespace);
+    require('./namespaces/aviator')(aviatorNamespace);
 
     logger.info('✅ Socket.IO namespaces initialized');
 };

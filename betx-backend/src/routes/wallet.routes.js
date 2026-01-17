@@ -19,9 +19,15 @@ router.use(protect);
 // Wallet balance
 router.get('/balance', getBalance);
 
+const multer = require('multer');
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
+
 // Deposit
 router.post('/deposit/initiate', initiateDeposit);
-router.post('/deposit/manual', submitManualDeposit);
+router.post('/deposit/manual', upload.single('screenshot'), submitManualDeposit);
 
 // Withdrawal
 router.post('/withdraw', withdrawalLimiter, validateWithdrawal, requestWithdrawal);

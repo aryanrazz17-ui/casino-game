@@ -2,6 +2,7 @@ const supabase = require('../config/supabase');
 const { asyncHandler, AppError } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
 const WalletService = require('../services/wallet.service');
+const { uploadFromBuffer } = require('../utils/cloudinary');
 
 /**
  * @route   GET /api/wallet/balance
@@ -119,6 +120,18 @@ exports.submitManualDeposit = asyncHandler(async (req, res, next) => {
     // Get or create wallet
     let wallet = await WalletService.getOrCreateWallet(req.user.id, currency);
 
+    // Upload screenshot to Cloudinary if exists
+    let screenshotUrl = null;
+    if (req.file) {
+        try {
+            const result = await uploadFromBuffer(req.file.buffer, 'deposits');
+            screenshotUrl = result.secure_url;
+        } catch (uploadError) {
+            logger.error('Screenshot upload failed:', uploadError);
+            return next(new AppError('Failed to upload proof image', 500));
+        }
+    }
+
     // Create pending transaction
     const { data: transaction, error: txError } = await supabase
         .from('transactions')
@@ -126,13 +139,14 @@ exports.submitManualDeposit = asyncHandler(async (req, res, next) => {
             user_id: req.user.id,
             type: 'deposit',
             currency,
-            amount,
+            amount: parseFloat(amount),
             status: 'pending',
             payment_method: paymentMethod,
             payment_gateway: 'manual_upi',
             balance_before: wallet.balance,
             metadata: {
                 utr: utr,
+                transaction_image: screenshotUrl,
                 manual_request: true,
                 submitted_at: new Date()
             },

@@ -130,11 +130,24 @@ export default function TransactionsManagement() {
                                         <td className="px-6 py-4">
                                             <div className="text-sm">
                                                 <p className="font-medium">{tx.user?.username || 'Unknown'}</p>
-                                                {tx.metadata?.utr ? (
-                                                    <p className="text-[10px] text-primary-400 font-bold bg-primary-500/5 px-1.5 py-0.5 rounded border border-primary-500/10 inline-block mt-1">
-                                                        UTR: {tx.metadata.utr}
-                                                    </p>
-                                                ) : (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {tx.metadata?.utr && (
+                                                        <p className="text-[10px] text-primary-400 font-bold bg-primary-500/5 px-1.5 py-0.5 rounded border border-primary-500/10 inline-block">
+                                                            UTR: {tx.metadata.utr}
+                                                        </p>
+                                                    )}
+                                                    {tx.metadata?.transaction_image && (
+                                                        <a
+                                                            href={tx.metadata.transaction_image}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-[10px] text-green-400 font-bold bg-green-500/5 px-1.5 py-0.5 rounded border border-green-500/10 hover:bg-green-500/10 transition-colors flex items-center gap-1"
+                                                        >
+                                                            View Proof
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                {!tx.metadata?.utr && !tx.metadata?.transaction_image && (
                                                     <p className="text-xs text-gray-500">{tx.user?.email || ''}</p>
                                                 )}
                                             </div>

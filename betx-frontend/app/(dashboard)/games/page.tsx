@@ -53,6 +53,20 @@ const games = [
         image: '/games/slot.png',
         status: 'LIVE' as const,
     },
+    {
+        name: 'Keno',
+        description: 'Select numbers and match the draw to win up to 4000x your bet.',
+        path: '/games/keno',
+        image: '/games/dice.png', // Fallback image
+        status: 'LIVE' as const,
+    },
+    {
+        name: 'Aviator',
+        description: 'Multiplayer crash game. Cash out before the plane crashes!',
+        path: '/games/aviator',
+        image: '/games/crash.png', // Fallback image
+        status: 'LIVE' as const,
+    },
 ]
 
 export default function GamesPage() {
@@ -79,7 +93,7 @@ export default function GamesPage() {
                 <StatCard
                     icon={<Gamepad2 className="w-6 h-6 text-primary-400" />}
                     label="Active Games"
-                    value="7"
+                    value="9"
                 />
                 <StatCard
                     icon={<TrendingUp className="w-6 h-6 text-green-400" />}
