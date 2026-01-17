@@ -53,10 +53,17 @@ router.get('/qr', getQRs);
 router.put('/qr/:id', updateQR);
 router.delete('/qr/:id', deleteQR);
 
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
 // Dynamic Payment Methods
 router.get('/payment-methods', getAdminPaymentMethods);
-router.post('/payment-methods', addPaymentMethod);
-router.put('/payment-methods/:id', updatePaymentMethod);
+router.post('/payment-methods', upload.single('qr_image'), addPaymentMethod);
+router.put('/payment-methods/:id', upload.single('qr_image'), updatePaymentMethod);
 router.delete('/payment-methods/:id', deletePaymentMethod);
 
 module.exports = router;

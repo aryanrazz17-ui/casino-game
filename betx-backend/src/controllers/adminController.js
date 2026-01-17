@@ -2,6 +2,7 @@ const supabase = require('../config/supabase');
 const { asyncHandler, AppError } = require('../middleware/errorHandler');
 const { logger } = require('../utils/logger');
 const WalletService = require('../services/wallet.service');
+const { uploadFromBuffer } = require('../utils/cloudinary');
 
 /**
  * @route   GET /api/admin/stats
@@ -553,19 +554,37 @@ exports.getAdminPaymentMethods = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 exports.addPaymentMethod = asyncHandler(async (req, res, next) => {
-    const { name, upiId, qrImageUrl } = req.body;
+    const { name, upiId } = req.body;
+    let qrImageUrl = req.body.qrImageUrl;
+
+    if (!name) return next(new AppError('Payment method name is required', 400));
+
+    // Handle file upload if present
+    if (req.file) {
+        try {
+            const result = await uploadFromBuffer(req.file.buffer, 'payment_methods');
+            qrImageUrl = result.secure_url;
+        } catch (err) {
+            logger.error('Cloudinary upload error:', err);
+            return next(new AppError('Failed to upload QR image', 500));
+        }
+    }
 
     const { data, error } = await supabase
         .from('payment_methods')
         .insert({
             name,
             upi_id: upiId,
-            qr_image_url: qrImageUrl
+            qr_image_url: qrImageUrl,
+            is_active: true
         })
         .select()
         .single();
 
-    if (error) throw new AppError(error.message, 500);
+    if (error) {
+        logger.error('Error adding payment method:', error);
+        throw new AppError(error.message, 500);
+    }
 
     res.status(201).json({
         success: true,
@@ -581,13 +600,26 @@ exports.addPaymentMethod = asyncHandler(async (req, res, next) => {
  */
 exports.updatePaymentMethod = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
-    const { name, upiId, qrImageUrl, isActive } = req.body;
+    const { name, upiId, isActive } = req.body;
+    let qrImageUrl = req.body.qrImageUrl;
 
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (upiId !== undefined) updates.upi_id = upiId;
-    if (qrImageUrl !== undefined) updates.qr_image_url = qrImageUrl;
     if (isActive !== undefined) updates.is_active = isActive;
+
+    // Handle file upload if present
+    if (req.file) {
+        try {
+            const result = await uploadFromBuffer(req.file.buffer, 'payment_methods');
+            updates.qr_image_url = result.secure_url;
+        } catch (err) {
+            logger.error('Cloudinary upload error:', err);
+            return next(new AppError('Failed to upload QR image', 500));
+        }
+    } else if (qrImageUrl !== undefined) {
+        updates.qr_image_url = qrImageUrl;
+    }
 
     const { data, error } = await supabase
         .from('payment_methods')
@@ -596,7 +628,10 @@ exports.updatePaymentMethod = asyncHandler(async (req, res, next) => {
         .select()
         .single();
 
-    if (error) throw new AppError(error.message, 500);
+    if (error) {
+        logger.error('Error updating payment method:', error);
+        throw new AppError(error.message, 500);
+    }
 
     res.status(200).json({
         success: true,
