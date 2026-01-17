@@ -113,23 +113,35 @@ exports.initiateDeposit = asyncHandler(async (req, res, next) => {
 exports.submitManualDeposit = asyncHandler(async (req, res, next) => {
     const { amount, currency = 'INR', paymentMethod, utr } = req.body;
 
+    // Validate required fields
     if (!amount || amount <= 0 || !utr) {
         return next(new AppError('Invalid deposit details. Amount and UTR required.', 400));
+    }
+
+    // Validate screenshot upload
+    if (!req.file) {
+        logger.warn(`Manual deposit attempt without screenshot: ${req.user.username}`);
+        return next(new AppError('Payment screenshot is required', 400));
     }
 
     // Get or create wallet
     let wallet = await WalletService.getOrCreateWallet(req.user.id, currency);
 
-    // Upload screenshot to Cloudinary if exists
+    // Upload screenshot to Cloudinary
     let screenshotUrl = null;
-    if (req.file) {
-        try {
-            const result = await uploadFromBuffer(req.file.buffer, 'deposits');
-            screenshotUrl = result.secure_url;
-        } catch (uploadError) {
-            logger.error('Screenshot upload failed:', uploadError);
-            return next(new AppError('Failed to upload proof image', 500));
-        }
+    try {
+        logger.info(`Uploading screenshot for user: ${req.user.username}, file size: ${req.file.size} bytes`);
+        const result = await uploadFromBuffer(req.file.buffer, 'deposits');
+        screenshotUrl = result.secure_url;
+        logger.info(`Screenshot uploaded successfully: ${screenshotUrl}`);
+    } catch (uploadError) {
+        logger.error('Screenshot upload failed:', {
+            error: uploadError.message,
+            user: req.user.username,
+            fileSize: req.file?.size,
+            mimeType: req.file?.mimetype
+        });
+        return next(new AppError('Failed to upload proof image. Please try again.', 500));
     }
 
     // Create pending transaction
@@ -156,13 +168,14 @@ exports.submitManualDeposit = asyncHandler(async (req, res, next) => {
 
     if (txError) throw new AppError(txError.message, 500);
 
-    logger.info(`Manual deposit request: ${req.user.username} - ${amount} ${currency} - UTR: ${utr}`);
+    logger.info(`Manual deposit request: ${req.user.username} - ${amount} ${currency} - UTR: ${utr} - Screenshot: ${screenshotUrl}`);
 
     res.status(200).json({
         success: true,
         message: 'Deposit request submitted for verification',
         data: {
-            transactionId: transaction.id
+            transactionId: transaction.id,
+            screenshotUrl: screenshotUrl
         }
     });
 });

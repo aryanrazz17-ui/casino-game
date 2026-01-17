@@ -107,13 +107,19 @@ export default function DepositForm() {
             formData.append('utr', utr)
             formData.append('screenshot', selectedFile)
 
-            await api.post('/wallet/deposit/manual', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+            // Don't set Content-Type - let browser set it with boundary
+            const response = await api.post('/wallet/deposit/manual', formData, {
+                headers: {}
             })
 
-            toast.success('Deposit request submitted!')
-            setDepositData({ success: true, manual: true })
+            toast.success('Deposit request submitted! Admin will verify shortly.')
+            setDepositData({
+                success: true,
+                manual: true,
+                transactionId: response.data.data.transactionId
+            })
         } catch (error: any) {
+            console.error('Deposit submission error:', error)
             toast.error(error.response?.data?.message || 'Submission failed')
         } finally {
             setSubmittingUtr(false)
