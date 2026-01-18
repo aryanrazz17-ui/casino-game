@@ -158,7 +158,7 @@ export default function MinesPage() {
                 {/* Game Board */}
                 <div className="lg:col-span-8">
                     <Card className="p-4 md:p-8 bg-dark-300/30 border-white/5 shadow-2xl backdrop-blur-sm">
-                        <div className="grid grid-cols-5 gap-3 sm:gap-4 aspect-square max-w-[500px] mx-auto">
+                        <div className="grid grid-cols-5 gap-3 sm:gap-4 aspect-square w-full max-w-[500px] mx-auto">
                             {Array.from({ length: 25 }, (_, i) => (
                                 <MinesTile
                                     key={i}

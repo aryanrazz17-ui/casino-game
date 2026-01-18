@@ -182,16 +182,17 @@ export default function CrashPage() {
 
                 {/* Right Side: Controls */}
                 <div className="lg:col-span-4 space-y-6">
+                    {/* Controls Card */}
                     <Card className="p-6 border-white/10 bg-dark-200/50 backdrop-blur-xl">
                         <div className="space-y-6">
                             {/* Bet Amount */}
                             <div>
-                                <label className="text-sm font-medium text-gray-400 mb-2 block uppercase tracking-widest">
+                                <label className="text-xs font-bold text-gray-400 mb-2 block uppercase tracking-widest">
                                     Bet Amount
                                 </label>
                                 <div className="relative">
                                     <Input
-                                        type="number"
+                                        type="tel" // optimized for mobile numeric keypad
                                         value={betAmount}
                                         onChange={(e) => setBetAmount(e.target.value)}
                                         className="pl-12 bg-dark-400/50 border-white/10 h-14 text-lg font-bold"
@@ -206,7 +207,7 @@ export default function CrashPage() {
                                         <button
                                             key={amt}
                                             onClick={() => setBetAmount(amt.toString())}
-                                            className="py-2 text-xs font-bold rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-colors"
+                                            className="py-3 md:py-2 text-xs font-bold rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-colors active:scale-95"
                                         >
                                             +{amt}
                                         </button>
@@ -216,12 +217,12 @@ export default function CrashPage() {
 
                             {/* Auto Cashout */}
                             <div>
-                                <label className="text-sm font-medium text-gray-400 mb-2 block uppercase tracking-widest">
+                                <label className="text-xs font-bold text-gray-400 mb-2 block uppercase tracking-widest">
                                     Auto Cashout
                                 </label>
                                 <div className="relative">
                                     <Input
-                                        type="number"
+                                        type="tel"
                                         value={autoCashout}
                                         onChange={(e) => setAutoCashout(e.target.value)}
                                         className="pl-12 bg-dark-400/50 border-white/10 h-14 text-lg font-bold"
@@ -236,7 +237,7 @@ export default function CrashPage() {
                                         <button
                                             key={mul}
                                             onClick={() => setAutoCashout(mul.toFixed(2))}
-                                            className="py-2 text-xs font-bold rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-colors"
+                                            className="py-3 md:py-2 text-xs font-bold rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-colors active:scale-95"
                                         >
                                             {mul}x
                                         </button>
@@ -248,7 +249,7 @@ export default function CrashPage() {
                             <Button
                                 onClick={handlePlay}
                                 disabled={!isConnected || isPlaying}
-                                className={`w-full h-16 text-xl font-black uppercase tracking-tighter transition-all duration-300 ${isPlaying
+                                className={`w-full h-16 text-xl font-black uppercase tracking-tighter transition-all duration-300 touch-manipulation ${isPlaying
                                     ? 'bg-primary-600/50 cursor-not-allowed'
                                     : 'bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-500 hover:to-purple-500 shadow-xl shadow-primary-500/20 active:scale-[0.98]'
                                     }`}
@@ -266,42 +267,41 @@ export default function CrashPage() {
                     </Card>
 
                     {/* History */}
-                    <Card className="p-6 border-white/10 bg-dark-200/50">
+                    <Card className="p-4 md:p-6 border-white/10 bg-dark-200/50">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold flex items-center gap-2">
+                            <h3 className="font-bold flex items-center gap-2 text-sm md:text-base">
                                 <History className="w-4 h-4 text-gray-400" />
                                 Recent Games
                             </h3>
-                            <button className="text-xs text-primary-400 hover:underline">View All</button>
                         </div>
-                        <div className="space-y-3">
+                        <div className="flex md:flex-col gap-3 overflow-x-auto pb-2 md:pb-0 md:overflow-visible noscrollbar">
                             {history.length === 0 ? (
-                                <div className="py-8 text-center bg-white/5 rounded-xl border border-dashed border-white/10">
+                                <div className="w-full py-8 text-center bg-white/5 rounded-xl border border-dashed border-white/10">
                                     <p className="text-gray-500 text-sm">No games yet</p>
                                 </div>
                             ) : (
                                 history.map((game, i) => (
                                     <div
                                         key={i}
-                                        className={`p-3 rounded-xl border flex items-center justify-between group transition-all ${game.isWin
-                                            ? 'bg-green-500/5 border-green-500/20 hover:border-green-500/40'
-                                            : 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'
+                                        className={`flex-shrink-0 w-32 md:w-full p-3 rounded-xl border flex flex-col md:flex-row items-center md:items-center justify-between group transition-all ${game.isWin
+                                            ? 'bg-green-500/5 border-green-500/20'
+                                            : 'bg-red-500/5 border-red-500/20'
                                             }`}
                                     >
-                                        <div>
-                                            <p className={`font-black ${game.isWin ? 'text-green-400' : 'text-red-400'}`}>
+                                        <div className="text-center md:text-left">
+                                            <p className={`font-black text-lg md:text-base ${game.isWin ? 'text-green-400' : 'text-red-400'}`}>
                                                 {game.crashPoint.toFixed(2)}x
                                             </p>
                                             <p className="text-[10px] text-gray-500 font-medium">
                                                 ID: {game.gameId.slice(-6)}
                                             </p>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-center md:text-right mt-1 md:mt-0">
                                             <p className="font-bold text-sm">
                                                 {game.isWin ? '+' : '-'}
                                                 {formatCurrency(game.isWin ? game.payout : parseFloat(betAmount), selectedCurrency)}
                                             </p>
-                                            <p className="text-[10px] text-gray-400">
+                                            <p className="text-[10px] text-gray-400 hidden md:block">
                                                 {game.isWin ? `Cashed @ ${game.cashoutAt}x` : 'Bust'}
                                             </p>
                                         </div>

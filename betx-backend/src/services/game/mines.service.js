@@ -1,32 +1,21 @@
-const crypto = require('crypto');
+const pf = require('../../utils/provablyFairHelper');
 
 /**
  * Generate mines grid using provably fair algorithm
  */
 function generateMinesGrid(serverSeed, clientSeed, nonce, minesCount = 3) {
-    const positions = [];
+    // We need 25 positions. 
+    // We shuffle a list of [0..24] and take the first N as mines.
+    // This is much faster and cleaner than collision retry loops.
 
-    for (let i = 0; i < minesCount; i++) {
-        const hash = crypto
-            .createHmac('sha256', serverSeed)
-            .update(`${clientSeed}:${nonce}:${i}`)
-            .digest('hex');
+    // Shuffle standard deck of 25 positions
+    const deck = pf.generateShuffle(serverSeed, clientSeed, nonce, 25);
 
-        const position = parseInt(hash.substring(0, 8), 16) % 25; // 5x5 grid = 25 positions
+    // Take first N for mines
+    const minePositions = deck.slice(0, minesCount);
 
-        if (!positions.includes(position)) {
-            positions.push(position);
-        } else {
-            // If collision, try next position
-            let nextPos = (position + 1) % 25;
-            while (positions.includes(nextPos)) {
-                nextPos = (nextPos + 1) % 25;
-            }
-            positions.push(nextPos);
-        }
-    }
-
-    return positions.sort((a, b) => a - b);
+    // Sort for display convenience
+    return minePositions.sort((a, b) => a - b);
 }
 
 /**
@@ -52,28 +41,23 @@ function calculateMinesMultiplier(revealedCount, minesCount) {
  */
 exports.startMines = ({ betAmount, minesCount = 3, clientSeed = null }) => {
     // Validation
-    if (!betAmount || betAmount <= 0) {
-        throw new Error('Invalid bet amount');
-    }
-
-    if (minesCount < 1 || minesCount > 24) {
-        throw new Error('Mines count must be between 1 and 24');
-    }
+    if (!betAmount || betAmount <= 0) throw new Error('Invalid bet amount');
+    if (minesCount < 1 || minesCount > 24) throw new Error('Mines count must be between 1 and 24');
 
     // Generate provably fair seeds
-    const serverSeed = crypto.randomBytes(32).toString('hex');
-    const serverSeedHash = crypto.createHash('sha256').update(serverSeed).digest('hex');
-    const finalClientSeed = clientSeed || crypto.randomBytes(16).toString('hex');
+    const serverSeed = pf.generateServerSeed();
+    const serverSeedHash = pf.hashSeed(serverSeed);
+    const finalClientSeed = clientSeed || pf.generateClientSeed();
     const nonce = Date.now();
 
     // Generate mines positions
     const minePositions = generateMinesGrid(serverSeed, finalClientSeed, nonce, minesCount);
 
     return {
-        gameId: crypto.randomBytes(16).toString('hex'),
+        gameId: pf.generateSeed(16),
         betAmount,
         minesCount,
-        minePositions, // Hidden from player until game ends
+        minePositions,
         revealedTiles: [],
         isActive: true,
         fairness: {
@@ -90,17 +74,9 @@ exports.startMines = ({ betAmount, minesCount = 3, clientSeed = null }) => {
  * Reveal tile in Mines game
  */
 exports.revealTile = (gameState, position) => {
-    if (!gameState.isActive) {
-        throw new Error('Game is not active');
-    }
-
-    if (position < 0 || position > 24) {
-        throw new Error('Invalid tile position');
-    }
-
-    if (gameState.revealedTiles.includes(position)) {
-        throw new Error('Tile already revealed');
-    }
+    if (!gameState.isActive) throw new Error('Game is not active');
+    if (position < 0 || position > 24) throw new Error('Invalid tile position');
+    if (gameState.revealedTiles.includes(position)) throw new Error('Tile already revealed');
 
     const hitMine = gameState.minePositions.includes(position);
 
@@ -121,7 +97,7 @@ exports.revealTile = (gameState, position) => {
             }
         };
     } else {
-        // Safe tile - continue game
+        // Safe tile
         const newRevealedTiles = [...gameState.revealedTiles, position];
         const multiplier = calculateMinesMultiplier(newRevealedTiles.length, gameState.minesCount);
         const currentPayout = Number((gameState.betAmount * multiplier).toFixed(2));
@@ -142,13 +118,8 @@ exports.revealTile = (gameState, position) => {
  * Cashout from Mines game
  */
 exports.cashoutMines = (gameState) => {
-    if (!gameState.isActive) {
-        throw new Error('Game is not active');
-    }
-
-    if (gameState.revealedTiles.length === 0) {
-        throw new Error('Must reveal at least one tile before cashing out');
-    }
+    if (!gameState.isActive) throw new Error('Game is not active');
+    if (gameState.revealedTiles.length === 0) throw new Error('Must reveal at least one tile before cashing out');
 
     const multiplier = calculateMinesMultiplier(gameState.revealedTiles.length, gameState.minesCount);
     const payout = Number((gameState.betAmount * multiplier).toFixed(2));

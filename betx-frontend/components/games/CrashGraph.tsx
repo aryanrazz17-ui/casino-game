@@ -68,8 +68,9 @@ export const CrashGraph: React.FC<CrashGraphProps> = ({ multiplier, isCrashed })
             }
 
             // Draw current multiplier text
+            const fontSize = Math.min(rect.width * 0.15, 60)
             ctx.fillStyle = isCrashed ? '#ef4444' : '#ffffff'
-            ctx.font = 'bold 48px Inter'
+            ctx.font = `bold ${fontSize}px Inter`
             ctx.textAlign = 'center'
             ctx.fillText(`${multiplier.toFixed(2)}x`, rect.width / 2, rect.height / 2)
         }
@@ -79,14 +80,14 @@ export const CrashGraph: React.FC<CrashGraphProps> = ({ multiplier, isCrashed })
     }, [multiplier, isCrashed])
 
     return (
-        <div className="relative w-full h-80 bg-dark-300/50 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
+        <div className="relative w-full aspect-video md:h-96 md:aspect-auto bg-dark-300/50 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
             <canvas
                 ref={canvasRef}
                 className="w-full h-full"
             />
             {isCrashed && (
                 <div className="absolute inset-0 flex items-center justify-center bg-red-500/10 animate-pulse">
-                    <span className="text-4xl font-black text-red-500 uppercase tracking-widest drop-shadow-lg">
+                    <span className="text-3xl md:text-4xl font-black text-red-500 uppercase tracking-widest drop-shadow-lg">
                         Crashed
                     </span>
                 </div>

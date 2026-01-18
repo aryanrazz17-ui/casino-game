@@ -67,6 +67,13 @@ const games = [
         image: '/games/crash.png', // Fallback image
         status: 'LIVE' as const,
     },
+    {
+        name: 'Color Prediction',
+        description: 'Predict colors, numbers or size. Win up to 9x your bet!',
+        path: '/games/color-prediction',
+        image: '/games/dice.png', // Fallback image
+        status: 'LIVE' as const,
+    },
 ]
 
 export default function GamesPage() {
@@ -93,7 +100,7 @@ export default function GamesPage() {
                 <StatCard
                     icon={<Gamepad2 className="w-6 h-6 text-primary-400" />}
                     label="Active Games"
-                    value="9"
+                    value="10"
                 />
                 <StatCard
                     icon={<TrendingUp className="w-6 h-6 text-green-400" />}

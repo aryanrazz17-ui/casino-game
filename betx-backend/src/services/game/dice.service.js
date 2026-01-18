@@ -1,17 +1,12 @@
-const crypto = require('crypto');
+const pf = require('../../utils/provablyFairHelper');
 
 /**
- * Provably Fair Dice Roll using HMAC-SHA256
+ * Provably Fair Dice Roll
  */
 function generateRoll(serverSeed, clientSeed, nonce) {
-    const hash = crypto
-        .createHmac('sha256', serverSeed)
-        .update(`${clientSeed}:${nonce}`)
-        .digest('hex');
-
-    // Convert first 8 hex chars to decimal, normalize to 0-100 range
-    const roll = (parseInt(hash.substring(0, 8), 16) / 0xffffffff) * 100;
-
+    const float = pf.generateFloat(serverSeed, clientSeed, nonce);
+    // Scale 0-1 to 0-100
+    const roll = float * 100;
     return Number(roll.toFixed(2));
 }
 
@@ -21,6 +16,8 @@ function generateRoll(serverSeed, clientSeed, nonce) {
 function calculateMultiplier(target, condition) {
     const winChance = condition === 'over' ? 100 - target : target;
     const houseEdge = 0.01; // 1% house edge
+    // Protect against weird float math or /0 (though validation prevents 0 chance)
+    if (winChance <= 0) return 0;
     return Number(((99 / winChance) * (1 - houseEdge)).toFixed(4));
 }
 
@@ -29,22 +26,14 @@ function calculateMultiplier(target, condition) {
  */
 exports.playDice = ({ betAmount, target, condition, clientSeed = null }) => {
     // Validation
-    if (!betAmount || betAmount <= 0) {
-        throw new Error('Invalid bet amount');
-    }
-
-    if (!target || target < 1 || target > 99) {
-        throw new Error('Target must be between 1 and 99');
-    }
-
-    if (!['over', 'under'].includes(condition)) {
-        throw new Error('Condition must be "over" or "under"');
-    }
+    if (!betAmount || betAmount <= 0) throw new Error('Invalid bet amount');
+    if (!target || target < 1 || target > 99) throw new Error('Target must be between 1 and 99');
+    if (!['over', 'under'].includes(condition)) throw new Error('Condition must be "over" or "under"');
 
     // Generate provably fair seeds
-    const serverSeed = crypto.randomBytes(32).toString('hex');
-    const serverSeedHash = crypto.createHash('sha256').update(serverSeed).digest('hex');
-    const finalClientSeed = clientSeed || crypto.randomBytes(16).toString('hex');
+    const serverSeed = pf.generateServerSeed();
+    const serverSeedHash = pf.hashSeed(serverSeed);
+    const finalClientSeed = clientSeed || pf.generateClientSeed();
     const nonce = Date.now();
 
     // Generate roll result
@@ -77,7 +66,8 @@ exports.playDice = ({ betAmount, target, condition, clientSeed = null }) => {
             serverSeedHash,
             clientSeed: finalClientSeed,
             nonce,
-            revealed: true
+            revealed: true // In this basic version, we reveal immediately. 
+            // Truly, serverSeed should be hidden until user "rotates" seed pair, but for MVP atomic games, revealing instantly is common to verify *that* round.
         }
     };
 };
@@ -87,7 +77,7 @@ exports.playDice = ({ betAmount, target, condition, clientSeed = null }) => {
  */
 exports.verifyFairness = (serverSeed, clientSeed, nonce) => {
     const roll = generateRoll(serverSeed, clientSeed, nonce);
-    const hash = crypto.createHash('sha256').update(serverSeed).digest('hex');
+    const hash = pf.hashSeed(serverSeed);
 
     return {
         roll,

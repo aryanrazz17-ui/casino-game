@@ -64,5 +64,10 @@ module.exports = (io) => {
     require('./namespaces/keno')(kenoNamespace);
     require('./namespaces/aviator')(aviatorNamespace);
 
+    // Color Prediction (New)
+    const colorPredictionNamespace = io.of('/color-prediction');
+    colorPredictionNamespace.use(socketAuth);
+    require('./namespaces/color-prediction')(colorPredictionNamespace);
+
     logger.info('✅ Socket.IO namespaces initialized');
 };
