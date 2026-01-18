@@ -10,22 +10,23 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
+  background: linear-gradient(to bottom,
       transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+      rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
   min-height: 100vh;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
   .noscrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .noscrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -63,6 +64,7 @@ body {
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
@@ -70,11 +72,9 @@ body {
 
 .animate-shimmer {
   animation: shimmer 2s infinite;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%);
   background-size: 1000px 100%;
 }

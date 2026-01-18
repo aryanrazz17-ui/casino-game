@@ -7,27 +7,41 @@ class SocketClient {
 
     connect(namespace: string, token: string): Socket {
         if (this.sockets.has(namespace)) {
-            return this.sockets.get(namespace)!
+            const socket = this.sockets.get(namespace)!
+            if (socket.connected) return socket
+            socket.auth = { token }
+            socket.connect()
+            return socket
         }
+
+        console.log(`🔌 Connecting to ${namespace} at ${SOCKET_URL}`)
 
         const socket = io(`${SOCKET_URL}${namespace}`, {
             auth: { token },
-            transports: ['websocket', 'polling'],
+            transports: ['websocket'], // FORCE WEBSOCKET
+            upgrade: false, // Disable upgrade since we force websocket
             reconnection: true,
             reconnectionDelay: 1000,
-            reconnectionAttempts: 5,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity, // Keep ensuring connection on mobile
+            timeout: 20000,
+            forceNew: true
         })
 
         socket.on('connect', () => {
-            console.log(`✅ Connected to ${namespace}`)
+            console.log(`✅ Connected to ${namespace} (${socket.id})`)
+        })
+
+        socket.on('connect_error', (err) => {
+            console.error(`❌ Connection error on ${namespace}:`, err.message)
         })
 
         socket.on('disconnect', (reason) => {
-            console.log(`❌ Disconnected from ${namespace}:`, reason)
-        })
-
-        socket.on('error', (error) => {
-            console.error(`Socket error on ${namespace}:`, error)
+            console.log(`⚠️ Disconnected from ${namespace}:`, reason)
+            if (reason === 'io server disconnect') {
+                // connection was manually closed by the server, reconnect manually
+                socket.connect()
+            }
         })
 
         this.sockets.set(namespace, socket)

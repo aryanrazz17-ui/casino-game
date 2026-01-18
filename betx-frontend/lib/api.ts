@@ -1,6 +1,18 @@
 import axios from 'axios'
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000').replace(/\/$/, '')
+const getBaseUrl = () => {
+    let url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000'
+    // Dynamic URL detection for local network access (e.g. mobile testing)
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1' && (url.includes('localhost') || url.includes('127.0.0.1'))) {
+            url = url.replace('localhost', hostname).replace('127.0.0.1', hostname)
+        }
+    }
+    return url.replace(/\/$/, '')
+}
+
+const API_URL = getBaseUrl()
 
 const api = axios.create({
     baseURL: `${API_URL}/api`,

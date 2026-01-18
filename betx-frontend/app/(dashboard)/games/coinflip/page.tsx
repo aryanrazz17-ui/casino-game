@@ -140,9 +140,9 @@ export default function CoinflipGame() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
                                         onClick={() => setChoice('heads')}
-                                        className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${choice === 'heads'
-                                                ? 'border-yellow-500 bg-yellow-500/10'
-                                                : 'border-zinc-700 hover:border-zinc-600 bg-zinc-800/50'
+                                        className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 touch-manipulation ${choice === 'heads'
+                                            ? 'border-yellow-500 bg-yellow-500/10'
+                                            : 'border-zinc-700 hover:border-zinc-600 bg-zinc-800/50'
                                             }`}
                                     >
                                         <div className="w-8 h-8 rounded-full bg-yellow-500 border-2 border-yellow-300" />
@@ -151,9 +151,9 @@ export default function CoinflipGame() {
 
                                     <button
                                         onClick={() => setChoice('tails')}
-                                        className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${choice === 'tails'
-                                                ? 'border-zinc-400 bg-zinc-400/10'
-                                                : 'border-zinc-700 hover:border-zinc-600 bg-zinc-800/50'
+                                        className={`relative p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 touch-manipulation ${choice === 'tails'
+                                            ? 'border-zinc-400 bg-zinc-400/10'
+                                            : 'border-zinc-700 hover:border-zinc-600 bg-zinc-800/50'
                                             }`}
                                     >
                                         <div className="w-8 h-8 rounded-full bg-zinc-400 border-2 border-zinc-200" />
@@ -167,8 +167,8 @@ export default function CoinflipGame() {
                             onClick={handlePlay}
                             disabled={gameState.isPlaying || Number(betAmount) <= 0 || !isConnected}
                             className={`w-full mt-6 py-6 text-xl font-black uppercase tracking-wider shadow-xl transition-all ${gameState.isPlaying
-                                    ? 'bg-zinc-800 text-zinc-500'
-                                    : 'bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-500 hover:to-purple-500 hover:scale-[1.02]'
+                                ? 'bg-zinc-800 text-zinc-500'
+                                : 'bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-500 hover:to-purple-500 hover:scale-[1.02]'
                                 }`}
                         >
                             {gameState.isPlaying ? 'Flipping...' : 'Flip Coin'}
@@ -209,8 +209,8 @@ export default function CoinflipGame() {
                                 <div
                                     key={i}
                                     className={`w-10 h-10 rounded-full flex items-center justify-center border-2 shadow-sm ${res === 'heads'
-                                            ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500'
-                                            : 'bg-zinc-500/20 border-zinc-400 text-zinc-300'
+                                        ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500'
+                                        : 'bg-zinc-500/20 border-zinc-400 text-zinc-300'
                                         }`}
                                 >
                                     {res === 'heads' ? 'H' : 'T'}

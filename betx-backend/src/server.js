@@ -18,12 +18,21 @@ const server = http.createServer(app);
 // Initialize Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: config.CLIENT_URL,
+        origin: (origin, callback) => {
+            const allowedOrigins = [config.CLIENT_URL, 'https://betx.vercel.app', 'http://localhost:3000'];
+            if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some(o => o.includes('*'))) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         methods: ['GET', 'POST'],
         credentials: true,
     },
+    transports: ['websocket'], // Force WebSocket only
     pingTimeout: 60000,
     pingInterval: 25000,
+    allowEIO3: true,
 });
 
 // Make io accessible to routes
