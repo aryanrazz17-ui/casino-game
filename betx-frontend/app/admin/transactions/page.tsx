@@ -147,8 +147,22 @@ export default function TransactionsManagement() {
                                                         </a>
                                                     )}
                                                 </div>
-                                                {!tx.metadata?.utr && !tx.metadata?.transaction_image && (
-                                                    <p className="text-xs text-gray-500">{tx.user?.email || ''}</p>
+                                                {tx.metadata?.withdrawalDetails && (
+                                                    <div className="mt-2 p-2 bg-yellow-500/5 border border-yellow-500/10 rounded-lg">
+                                                        <p className="text-[10px] text-yellow-500 font-bold uppercase mb-1 tracking-wider">Transfer Details:</p>
+                                                        <p className="text-xs text-gray-300 font-medium break-all">{tx.metadata.withdrawalDetails}</p>
+                                                    </div>
+                                                )}
+                                                {!tx.metadata?.utr && !tx.metadata?.transaction_image && !tx.metadata?.withdrawalDetails && (
+                                                    <div>
+                                                        <p className="text-xs text-gray-500">{tx.user?.email || ''}</p>
+                                                        {tx.user?.phone && (
+                                                            <p className="text-[10px] text-primary-400 mt-1">📞 {tx.user.phone}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {tx.metadata?.withdrawalDetails && tx.user?.phone && (
+                                                    <p className="text-[10px] text-primary-400 mt-1">📞 User Phone: {tx.user.phone}</p>
                                                 )}
                                             </div>
                                         </td>

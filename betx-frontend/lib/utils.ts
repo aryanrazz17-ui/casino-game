@@ -3,10 +3,11 @@ export function cn(...classes: (string | undefined | null | false)[]) {
 }
 
 export function formatCurrency(amount: number, currency: string = 'INR'): string {
+    const value = Number(amount) || 0;
     if (currency === 'INR') {
-        return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     }
-    return `${amount.toFixed(8)} ${currency}`
+    return `${value.toFixed(8)} ${currency}`
 }
 
 export function formatDate(date: string | Date): string {

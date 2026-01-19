@@ -47,7 +47,11 @@ module.exports = (namespace) => {
             // Record transaction for winnings if any
             const totalPayout = gameState.playerHands.reduce((acc, h) => acc + (h.payout || 0), 0);
             if (totalPayout > 0) {
-                const updatedWallet = await WalletService.credit(userId, totalPayout, currency);
+                const updatedWallet = await WalletService.credit(userId, totalPayout, currency, {
+                    gameType: 'blackjack',
+                    type: 'win',
+                    referenceId: game?.id
+                });
 
                 // Emit wallet update
                 namespace.to(`user:${userId}`).emit('wallet_update', {
@@ -57,17 +61,10 @@ module.exports = (namespace) => {
                     amount: totalPayout,
                     message: `Blackjack Win! You got ${totalPayout} ${currency}`
                 });
-
-                await supabase.from('transactions').insert({
-                    user_id: userId,
-                    type: 'win',
-                    currency: currency,
-                    amount: totalPayout,
-                    status: 'completed',
-                    payment_gateway: 'internal',
-                    metadata: { gameId: game?.id, gameType: 'blackjack' }
-                });
             }
+
+            // Emit history update
+            namespace.to(`user:${userId}`).emit('history_update');
 
             return { success: true, gameId: game?.id };
         } catch (error) {
@@ -120,7 +117,10 @@ module.exports = (namespace) => {
                 const balance = await WalletService.getBalance(user.id, currency);
                 if (balance < betAmount) return callback({ success: false, message: 'Insufficient balance' });
 
-                const updatedWallet = await WalletService.deduct(user.id, betAmount, currency);
+                const updatedWallet = await WalletService.deduct(user.id, betAmount, currency, {
+                    gameType: 'blackjack',
+                    type: 'bet'
+                });
 
                 // Emit wallet update
                 namespace.to(`user:${user.id}`).emit('wallet_update', {
@@ -130,16 +130,8 @@ module.exports = (namespace) => {
                     amount: betAmount
                 });
 
-                // Initial transaction record for bet
-                await supabase.from('transactions').insert({
-                    user_id: user.id,
-                    type: 'bet',
-                    currency: currency,
-                    amount: betAmount,
-                    status: 'completed',
-                    payment_gateway: 'internal',
-                    metadata: { gameType: 'blackjack' }
-                });
+                // Emit history update
+                namespace.to(`user:${user.id}`).emit('history_update');
 
                 let gameState = await BlackjackService.startRound(user.id, betAmount, clientSeed);
                 gameState.currency = currency;
@@ -292,7 +284,10 @@ module.exports = (namespace) => {
                 if (balance < activeHand.bet) return callback({ success: false, message: 'Insufficient balance to split' });
 
                 // Deduct additional bet
-                const updatedWallet = await WalletService.deduct(user.id, activeHand.bet, gameState.currency);
+                const updatedWallet = await WalletService.deduct(user.id, activeHand.bet, gameState.currency, {
+                    gameType: 'blackjack',
+                    type: 'bet'
+                });
 
                 // Emit wallet update
                 namespace.to(`user:${user.id}`).emit('wallet_update', {
@@ -301,6 +296,9 @@ module.exports = (namespace) => {
                     type: 'bet',
                     amount: activeHand.bet
                 });
+
+                // Emit history update
+                namespace.to(`user:${user.id}`).emit('history_update');
 
                 const newState = await BlackjackService.split(gameState);
                 activeGames.set(user.id, newState);

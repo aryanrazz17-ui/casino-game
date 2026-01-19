@@ -1,17 +1,24 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Poppins } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
+import { GlobalSocketHandler } from '@/components/GlobalSocketHandler'
+import TopBar from '@/components/layout/TopBar'
+import BottomNav from '@/components/layout/BottomNav'
+import WinnerPopup from '@/components/layout/WinnerPopup'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const poppins = Poppins({
+    weight: ['400', '500', '600', '700', '800', '900'],
+    subsets: ['latin'],
+    variable: '--font-poppins'
+})
 
 export const metadata: Metadata = {
-    title: 'BetX - Online Casino Gaming Platform',
-    description: 'Play provably fair casino games with cryptocurrency and INR',
-    keywords: 'casino, gaming, crypto, betting, dice, crash, mines, plinko',
+    title: 'BetX - Premium Online Casino',
+    description: 'Play provably fair casino games with instant payouts and high RTP.',
+    keywords: 'casino, gambling, crypto, betx, betting, slots, dice',
 }
-
-import { GlobalSocketHandler } from '@/components/GlobalSocketHandler'
 
 export default function RootLayout({
     children,
@@ -19,10 +26,15 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="en">
-            <body className={inter.className}>
+        <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
+            <body className={`${inter.className} bg-[#0a0a0f] text-white selection:bg-primary-500/30`}>
                 <GlobalSocketHandler />
-                {children}
+                <TopBar />
+                <main className="pt-16 pb-20 md:pb-0 min-h-screen">
+                    {children}
+                </main>
+                <BottomNav />
+                <WinnerPopup />
                 <Toaster
                     position="top-right"
                     toastOptions={{
@@ -30,19 +42,8 @@ export default function RootLayout({
                         style: {
                             background: '#18181b',
                             color: '#fff',
-                            border: '1px solid #3f3f46',
-                        },
-                        success: {
-                            iconTheme: {
-                                primary: '#10b981',
-                                secondary: '#fff',
-                            },
-                        },
-                        error: {
-                            iconTheme: {
-                                primary: '#ef4444',
-                                secondary: '#fff',
-                            },
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            borderRadius: '16px',
                         },
                     }}
                 />

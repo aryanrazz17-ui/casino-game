@@ -37,9 +37,12 @@ module.exports = (dice) => {
                     });
                 }
 
-                // Deduct bet amount (Atomic)
+                // Deduct bet amount (Atomic + Automated Audit Log)
                 try {
-                    const updatedWallet = await WalletService.deduct(user.id, betAmount, currency);
+                    const updatedWallet = await WalletService.deduct(user.id, betAmount, currency, {
+                        gameType: 'dice',
+                        type: 'bet'
+                    });
 
                     // Emit immediate wallet update for the bet
                     dice.to(`user:${user.id}`).emit('wallet_update', {
@@ -66,7 +69,10 @@ module.exports = (dice) => {
                 // Credit winnings if player won
                 let activeBalance;
                 if (gameResult.isWin && gameResult.payout > 0) {
-                    const updatedWallet = await WalletService.credit(user.id, gameResult.payout, currency);
+                    const updatedWallet = await WalletService.credit(user.id, gameResult.payout, currency, {
+                        gameType: 'dice',
+                        type: 'win'
+                    });
                     activeBalance = updatedWallet.balance;
 
                     // Emit real-time wallet update to the user
@@ -112,51 +118,10 @@ module.exports = (dice) => {
 
                 if (gameError) {
                     logger.error('Failed to save game:', gameError);
-                    // Critical error: Money handled but game not saved. 
-                    // In prod, this needs an alert.
                 }
 
-                const balanceBefore = parseFloat(activeBalance) - (gameResult.isWin ? gameResult.profit : -betAmount); // Approx reverse calc or carry state
-                // Actually balanceBefore was before the bet.
-                // Deduct happened: bal = bal - bet.
-                // Credit happened: bal = bal + payout.
-                // So current `activeBalance` = old - bet + payout.
-                // Previous code:
-                // balanceBefore (fetched before deduct)
-                // balanceAfter (fetched after credit)
-
-                // Transactions
-                // 1. Bet Transaction
-                await supabase.from('transactions').insert({
-                    user_id: user.id,
-                    type: 'bet',
-                    currency,
-                    amount: betAmount,
-                    status: 'completed',
-                    payment_gateway: 'internal',
-                    balance_before: 0, // We miss this precise state without dragging it through. Can query if needed.
-                    balance_after: 0,
-                    metadata: {
-                        gameId: game?.id,
-                        gameType: 'dice'
-                    }
-                });
-
-                // 2. Win Transaction
-                if (gameResult.isWin && gameResult.payout > 0) {
-                    await supabase.from('transactions').insert({
-                        user_id: user.id,
-                        type: 'win',
-                        currency,
-                        amount: gameResult.payout,
-                        status: 'completed',
-                        payment_gateway: 'internal',
-                        metadata: {
-                            gameId: game?.id,
-                            gameType: 'dice'
-                        }
-                    });
-                }
+                // Emit history update to trigger UI refresh
+                dice.to(`user:${user.id}`).emit('history_update');
 
                 logger.info(
                     `Dice played: ${user.username} | Bet: ${betAmount} | Roll: ${gameResult.roll} | Win: ${gameResult.isWin} | Payout: ${gameResult.payout}`

@@ -1,46 +1,69 @@
 const supabase = require('../config/supabase');
 
 /**
- * Deduct amount from user wallet with transaction safety
+ * Deduct amount from user wallet with transaction safety and audit log
  */
-exports.deduct = async (userId, amount, currency = 'INR') => {
+exports.deduct = async (userId, amount, currency = 'INR', metadata = {}) => {
     const { data, error } = await supabase.rpc('deduct_balance', {
         p_user_id: userId,
         p_amount: amount,
         p_currency: currency
     });
 
-    if (error) {
-        throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
+    if (!data.success) throw new Error(data.message);
 
-    if (!data.success) {
-        throw new Error(data.message);
-    }
+    // Automate transaction logging
+    const balanceAfter = parseFloat(data.new_balance);
+    const balanceBefore = balanceAfter + parseFloat(amount);
 
-    // Return object mimicking old Mongoose document structure if needed
-    // However, existing calls might expect the full wallet object.
-    // Let's fetch the wallet to be safe and consistent with previous return value
+    await supabase.from('transactions').insert({
+        user_id: userId,
+        type: metadata.type || 'bet',
+        currency,
+        amount,
+        status: 'completed',
+        balance_before: balanceBefore,
+        balance_after: balanceAfter,
+        game_type: metadata.gameType,
+        reference_id: metadata.referenceId,
+        metadata: metadata.meta || {},
+        payment_gateway: 'internal'
+    });
+
     return exports.getWallet(userId, currency);
 };
 
 /**
- * Credit amount to user wallet
+ * Credit amount to user wallet with audit log
  */
-exports.credit = async (userId, amount, currency = 'INR') => {
+exports.credit = async (userId, amount, currency = 'INR', metadata = {}) => {
     const { data, error } = await supabase.rpc('add_balance', {
         p_user_id: userId,
         p_amount: amount,
         p_currency: currency
     });
 
-    if (error) {
-        throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
+    if (!data.success) throw new Error(data.message);
 
-    if (!data.success) {
-        throw new Error(data.message);
-    }
+    // Automate transaction logging
+    const balanceAfter = parseFloat(data.new_balance);
+    const balanceBefore = balanceAfter - parseFloat(amount);
+
+    await supabase.from('transactions').insert({
+        user_id: userId,
+        type: metadata.type || 'win',
+        currency,
+        amount,
+        status: 'completed',
+        balance_before: balanceBefore,
+        balance_after: balanceAfter,
+        game_type: metadata.gameType,
+        reference_id: metadata.referenceId,
+        metadata: metadata.meta || {},
+        payment_gateway: 'internal'
+    });
 
     return exports.getWallet(userId, currency);
 };

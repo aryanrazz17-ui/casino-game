@@ -91,5 +91,13 @@ module.exports = (io) => {
     });
     require('./namespaces/blackjack')(blackjackNamespace);
 
+    // HiLo (New)
+    const hiloNamespace = io.of('/hilo');
+    hiloNamespace.use(socketAuth);
+    hiloNamespace.on('connection', (socket) => {
+        socket.join(`user:${socket.userId}`);
+    });
+    require('./namespaces/hilo')(hiloNamespace);
+
     logger.info('✅ Socket.IO namespaces initialized');
 };

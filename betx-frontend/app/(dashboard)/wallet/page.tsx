@@ -33,7 +33,7 @@ export default function WalletPage() {
             await api.post('/wallet/withdraw', {
                 amount: Number(withdrawAmount),
                 currency: selectedCurrency,
-                method: selectedCurrency === 'INR' ? 'UPI' : 'CRYPTO',
+                method: selectedCurrency === 'INR' ? 'upi' : 'crypto',
                 details: withdrawDetails
             })
 
@@ -173,17 +173,41 @@ export default function WalletPage() {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-400">
-                                    {selectedCurrency === 'INR' ? 'UPI ID / Bank Details' : `${selectedCurrency} Address`}
-                                </label>
-                                <input
-                                    type="text"
-                                    value={withdrawDetails}
-                                    onChange={(e) => setWithdrawDetails(e.target.value)}
-                                    placeholder={selectedCurrency === 'INR' ? 'Enter VPA (e.g. name@upi)' : `Enter ${selectedCurrency} receiver address`}
-                                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-primary-500"
-                                />
+                            <div className="space-y-4">
+                                {selectedCurrency === 'INR' && (
+                                    <div className="flex gap-2 p-1 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                                        <button
+                                            onClick={() => {
+                                                setWithdrawDetails('')
+                                                // We can use a local state for method type if needed, but for now we'll just handle it in the UI
+                                            }}
+                                            className="flex-1 py-1.5 text-xs font-bold rounded-md transition-all bg-primary-600 text-white shadow-lg"
+                                        >
+                                            UPI / BANK
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-400">
+                                        {selectedCurrency === 'INR' ? 'Payment Details' : `${selectedCurrency} Address`}
+                                    </label>
+                                    <textarea
+                                        value={withdrawDetails}
+                                        onChange={(e) => setWithdrawDetails(e.target.value)}
+                                        placeholder={selectedCurrency === 'INR'
+                                            ? 'Enter UPI ID OR Bank Details (Name, Acc No, IFSC, Bank Name)'
+                                            : `Enter your ${selectedCurrency} address`
+                                        }
+                                        rows={3}
+                                        className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-primary-500 resize-none"
+                                    />
+                                    {selectedCurrency === 'INR' && (
+                                        <p className="text-[10px] text-gray-500 italic">
+                                            For Bank: Provide Name, Account Number, IFSC, and Bank Name clearly.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <Button

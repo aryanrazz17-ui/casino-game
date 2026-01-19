@@ -85,9 +85,12 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // API Routes
 app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/wallet', require('./routes/wallet.routes'));
 app.use('/api/payment', require('./routes/payment.routes'));
 app.use('/api/games', require('./routes/game.routes'));
+app.use('/api/hilo', require('./routes/hilo.routes'));
+app.use('/api/roulette', require('./routes/roulette.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 
 // Socket.IO setup

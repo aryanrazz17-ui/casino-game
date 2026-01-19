@@ -170,6 +170,10 @@ exports.submitManualDeposit = asyncHandler(async (req, res, next) => {
 
     logger.info(`Manual deposit request: ${req.user.username} - ${amount} ${currency} - UTR: ${utr} - Screenshot: ${screenshotUrl}`);
 
+    // Emit history update
+    const io = req.app.get('io');
+    if (io) io.to(`user:${req.user.id}`).emit('history_update');
+
     res.status(200).json({
         success: true,
         message: 'Deposit request submitted for verification',
@@ -238,6 +242,10 @@ exports.requestWithdrawal = asyncHandler(async (req, res, next) => {
     }
 
     logger.info(`Withdrawal requested: ${req.user.username} - ${amount} ${currency}`);
+
+    // Emit history update
+    const io = req.app.get('io');
+    if (io) io.to(`user:${req.user.id}`).emit('history_update');
 
     res.status(200).json({
         success: true,

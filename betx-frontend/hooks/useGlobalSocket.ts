@@ -40,6 +40,13 @@ export function useGlobalSocket() {
             }
         })
 
+        socketInstance.on('history_update', () => {
+            console.log('🔄 History Update Received')
+            // This is a signal for any active history components to refresh
+            // We can dispatch a custom event or update a store if needed.
+            window.dispatchEvent(new CustomEvent('betx:history_update'))
+        })
+
         return () => {
             // We might want to keep the root connection alive as long as the user is logged in
             // so we don't necessarily disconnect here if this is used globally.

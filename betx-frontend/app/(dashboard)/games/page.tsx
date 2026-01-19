@@ -88,6 +88,27 @@ const games = [
         image: '/games/blackjack.png',
         status: 'LIVE' as const,
     },
+    {
+        name: 'HiLo',
+        description: 'Single player card game. Predict if the next card is higher or lower.',
+        path: '/games/hilo',
+        image: '/games/hilo.png',
+        status: 'LIVE' as const,
+    },
+    {
+        name: 'HiLo Multiplier',
+        description: 'Multiplayer HiLo. Join others and bet on the card drops.',
+        path: '/games/hilo-m',
+        image: '/games/hilo.png',
+        status: 'LIVE' as const,
+    },
+    {
+        name: 'Roulette',
+        description: 'Predict the color or number on the spinning wheel. High stake, high reward!',
+        path: '/games/roulette',
+        image: '/games/wheel.png',
+        status: 'LIVE' as const,
+    },
 ]
 
 export default function GamesPage() {

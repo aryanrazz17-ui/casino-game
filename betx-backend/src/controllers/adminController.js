@@ -220,7 +220,7 @@ exports.getTransactions = asyncHandler(async (req, res, next) => {
 
     let query = supabase
         .from('transactions')
-        .select('*, user:users!user_id(username, email)', { count: 'exact' })
+        .select('*, user:users!user_id(username, email, phone)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -381,6 +381,8 @@ exports.updateDeposit = asyncHandler(async (req, res, next) => {
                 message: `Deposit of ${tx.amount} ${tx.currency} approved!`,
                 severity: 'success'
             });
+
+            io.to(`user:${tx.user_id}`).emit('history_update');
         }
 
         res.status(200).json({

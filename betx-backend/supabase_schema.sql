@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS games (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) NOT NULL,
-    game_type VARCHAR(20) NOT NULL CHECK (game_type IN ('dice', 'crash', 'mines', 'plinko', 'slots')),
+    game_type VARCHAR(50) NOT NULL CHECK (game_type IN ('dice', 'crash', 'mines', 'plinko', 'slots', 'blackjack', 'baccarat', 'keno', 'color-prediction', 'aviator', 'wheel', 'coinflip', 'hilo')),
     currency VARCHAR(10) NOT NULL,
     bet_amount DECIMAL(20, 8) NOT NULL,
     payout DECIMAL(20, 8) DEFAULT 0,
@@ -81,11 +81,16 @@ CREATE TABLE IF NOT EXISTS games (
     server_seed_hash VARCHAR(255) NOT NULL,
     client_seed VARCHAR(255) NOT NULL,
     nonce INTEGER NOT NULL,
+    round_id VARCHAR(255),
     revealed BOOLEAN DEFAULT FALSE,
     transaction_id UUID REFERENCES transactions(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Update Transactions Table with requested columns
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS game_type TEXT;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS reference_id TEXT;
 
 -- Admin QR Table
 CREATE TABLE IF NOT EXISTS admin_qrs (

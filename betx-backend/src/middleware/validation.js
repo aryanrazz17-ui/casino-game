@@ -99,7 +99,7 @@ const validateWithdrawal = (req, res, next) => {
     }
 
     const validMethods = ['upi', 'bank', 'crypto'];
-    if (!validMethods.includes(method)) {
+    if (!validMethods.includes(method.toLowerCase())) {
         return next(new AppError('Invalid withdrawal method', 400));
     }
 

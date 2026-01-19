@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Gamepad2, Wallet, User, Menu, Home } from 'lucide-react'
+import { Gamepad2, Wallet, User, Menu, History } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
 export function BottomNav() {
@@ -12,6 +12,7 @@ export function BottomNav() {
     const navLinks = [
         { href: '/games', label: 'Games', icon: Gamepad2 },
         { href: '/wallet', label: 'Wallet', icon: Wallet },
+        { href: '/history', label: 'History', icon: History },
         { href: '/profile', label: 'Profile', icon: User },
     ]
 
@@ -29,8 +30,8 @@ export function BottomNav() {
                             key={link.href}
                             href={link.href}
                             className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${isActive
-                                    ? 'text-primary-400 bg-primary-500/10'
-                                    : 'text-gray-400 hover:text-gray-200'
+                                ? 'text-primary-400 bg-primary-500/10'
+                                : 'text-gray-400 hover:text-gray-200'
                                 }`}
                         >
                             <link.icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''}`} />

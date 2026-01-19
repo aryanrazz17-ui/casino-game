@@ -23,3 +23,11 @@ exports.emitWalletUpdate = (io, userId, data) => {
     // Also try to emit to specific game namespaces if needed, 
     // but the global room should be enough if the client is connected to /
 };
+
+/**
+ * Emit a history update event to trigger refresh on client
+ */
+exports.emitHistoryUpdate = (io, userId) => {
+    if (!io) return;
+    io.to(`user:${userId}`).emit('history_update');
+};

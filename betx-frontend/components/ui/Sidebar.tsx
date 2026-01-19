@@ -13,7 +13,8 @@ import {
     LogOut,
     LayoutDashboard,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    History as HistoryIcon
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -26,6 +27,7 @@ export function Sidebar() {
     const navLinks = [
         { href: '/games', label: 'Games', icon: Gamepad2 },
         { href: '/wallet', label: 'Wallet', icon: Wallet },
+        { href: '/history', label: 'History', icon: HistoryIcon },
         { href: '/profile', label: 'Profile', icon: User },
     ]
 
@@ -62,8 +64,8 @@ export function Sidebar() {
                             key={link.href}
                             href={link.href}
                             className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all group ${isActive
-                                    ? 'bg-primary-600/10 text-primary-400'
-                                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                ? 'bg-primary-600/10 text-primary-400'
+                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                 }`}
                             title={isCollapsed ? link.label : undefined}
                         >
