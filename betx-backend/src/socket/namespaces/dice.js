@@ -39,7 +39,15 @@ module.exports = (dice) => {
 
                 // Deduct bet amount (Atomic)
                 try {
-                    await WalletService.deduct(user.id, betAmount, currency);
+                    const updatedWallet = await WalletService.deduct(user.id, betAmount, currency);
+
+                    // Emit immediate wallet update for the bet
+                    dice.to(`user:${user.id}`).emit('wallet_update', {
+                        currency,
+                        newBalance: updatedWallet.balance,
+                        type: 'bet',
+                        amount: betAmount
+                    });
                 } catch (e) {
                     return callback({
                         success: false,
@@ -60,6 +68,15 @@ module.exports = (dice) => {
                 if (gameResult.isWin && gameResult.payout > 0) {
                     const updatedWallet = await WalletService.credit(user.id, gameResult.payout, currency);
                     activeBalance = updatedWallet.balance;
+
+                    // Emit real-time wallet update to the user
+                    dice.to(`user:${user.id}`).emit('wallet_update', {
+                        currency,
+                        newBalance: activeBalance,
+                        type: 'win',
+                        amount: gameResult.payout,
+                        message: `You won ${gameResult.payout} ${currency}!`
+                    });
                 } else {
                     activeBalance = await WalletService.getBalance(user.id, currency);
                 }

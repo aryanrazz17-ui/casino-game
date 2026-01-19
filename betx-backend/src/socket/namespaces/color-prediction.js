@@ -54,7 +54,15 @@ module.exports = (namespace) => {
 
             try {
                 // 1. Deduct Balance
-                await WalletService.deduct(socket.user.id, amount, data.currency || 'INR');
+                const updatedWallet = await WalletService.deduct(socket.user.id, amount, data.currency || 'INR');
+
+                // Emit wallet update
+                namespace.to(`user:${socket.user.id}`).emit('wallet_update', {
+                    currency: data.currency || 'INR',
+                    newBalance: updatedWallet.balance,
+                    type: 'bet',
+                    amount: amount
+                });
 
                 // 2. Log Transaction
                 await supabase.from('transactions').insert({
@@ -158,7 +166,16 @@ async function finishRound(io) {
                 });
 
                 try {
-                    await WalletService.credit(bet.userId, betResult.payout, bet.currency);
+                    const updatedWallet = await WalletService.credit(bet.userId, betResult.payout, bet.currency);
+
+                    // Emit wallet update to specific user
+                    namespace.to(`user:${bet.userId}`).emit('wallet_update', {
+                        currency: bet.currency,
+                        newBalance: updatedWallet.balance,
+                        type: 'win',
+                        amount: betResult.payout,
+                        message: `Congratulations! You won ${betResult.payout} ${bet.currency} in Color Prediction!`
+                    });
 
                     winTransactions.push({
                         user_id: bet.userId,

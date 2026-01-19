@@ -11,6 +11,8 @@ export const metadata: Metadata = {
     keywords: 'casino, gaming, crypto, betting, dice, crash, mines, plinko',
 }
 
+import { GlobalSocketHandler } from '@/components/GlobalSocketHandler'
+
 export default function RootLayout({
     children,
 }: {
@@ -19,6 +21,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
+                <GlobalSocketHandler />
                 {children}
                 <Toaster
                     position="top-right"

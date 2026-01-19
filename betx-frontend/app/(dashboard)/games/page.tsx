@@ -15,14 +15,14 @@ const games = [
         name: 'Coinflip',
         description: 'Heads or Tails? Flip the coin and win up to 1.98x your bet.',
         path: '/games/coinflip',
-        image: '/games/dice.png', // Fallback image
+        image: '/games/coinflip.png', // Fallback image
         status: 'LIVE' as const,
     },
     {
         name: 'Wheel',
         description: 'Spin the wheel of fortune. Choose your risk and win up to 50x.',
         path: '/games/wheel',
-        image: '/games/dice.png', // Fallback image
+        image: '/games/wheel.png', // Fallback image
         status: 'LIVE' as const,
     },
     {
@@ -57,21 +57,35 @@ const games = [
         name: 'Keno',
         description: 'Select numbers and match the draw to win up to 4000x your bet.',
         path: '/games/keno',
-        image: '/games/dice.png', // Fallback image
+        image: '/games/keno.png', // Fallback image
         status: 'LIVE' as const,
     },
     {
         name: 'Aviator',
         description: 'Multiplayer crash game. Cash out before the plane crashes!',
         path: '/games/aviator',
-        image: '/games/crash.png', // Fallback image
+        image: '/games/aviator.png', // Fallback image
         status: 'LIVE' as const,
     },
     {
         name: 'Color Prediction',
         description: 'Predict colors, numbers or size. Win up to 9x your bet!',
         path: '/games/color-prediction',
-        image: '/games/dice.png', // Fallback image
+        image: '/games/color.png', // Fallback image
+        status: 'LIVE' as const,
+    },
+    {
+        name: 'Baccarat',
+        description: 'Bet on Player, Banker or Tie in this classic casino card game.',
+        path: '/games/baccarat',
+        image: '/games/baccarat.png',
+        status: 'LIVE' as const,
+    },
+    {
+        name: 'Blackjack',
+        description: 'Beat the dealer by getting closer to 21 without busting.',
+        path: '/games/blackjack',
+        image: '/games/blackjack.png',
         status: 'LIVE' as const,
     },
 ]
@@ -100,7 +114,7 @@ export default function GamesPage() {
                 <StatCard
                     icon={<Gamepad2 className="w-6 h-6 text-primary-400" />}
                     label="Active Games"
-                    value="10"
+                    value={games.length.toString()}
                 />
                 <StatCard
                     icon={<TrendingUp className="w-6 h-6 text-green-400" />}

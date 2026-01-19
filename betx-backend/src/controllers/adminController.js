@@ -343,22 +343,25 @@ exports.updateDeposit = asyncHandler(async (req, res, next) => {
 
         // 3. Credit the wallet
         const wallet = await WalletService.credit(tx.user_id, tx.amount, tx.currency);
+        if (!wallet) {
+            throw new AppError('Failed to credit wallet: Wallet not found', 500);
+        }
 
         // 4. Update the transaction record
-        const { error } = await supabase.from('transactions').update({
+        const { error: updateError } = await supabase.from('transactions').update({
             status: 'completed',
             balance_after: wallet.balance,
-            processed_at: new Date(),
+            processed_at: new Date().toISOString(),
             metadata: {
                 ...tx.metadata,
                 notes,
-                approvedAt: new Date(),
+                approvedAt: new Date().toISOString(),
                 verifiedBy: 'admin'
             }
         }).eq('id', id);
 
-        if (error) {
-            logger.error('Error updating transaction after credit:', error);
+        if (updateError) {
+            logger.error('Error updating transaction after credit:', updateError);
             throw new AppError('Wallet credited but transaction log update failed', 500);
         }
 
@@ -366,11 +369,17 @@ exports.updateDeposit = asyncHandler(async (req, res, next) => {
         if (io) {
             io.to(`user:${tx.user_id}`).emit('wallet_update', {
                 type: 'deposit_approved',
-                message: `Success! Your deposit of ${tx.amount} ${tx.currency} has been credited to your wallet.`,
+                message: `Success! Your deposit of ${tx.amount} ${tx.currency} has been credited.`,
                 amount: tx.amount,
                 currency: tx.currency,
                 newBalance: wallet.balance,
                 transactionId: tx.id
+            });
+
+            io.to(`user:${tx.user_id}`).emit('notification', {
+                type: 'success',
+                message: `Deposit of ${tx.amount} ${tx.currency} approved!`,
+                severity: 'success'
             });
         }
 

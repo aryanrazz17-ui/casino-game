@@ -83,7 +83,15 @@ module.exports = (aviator) => {
 
                 // Deduct bet amount
                 try {
-                    await WalletService.deduct(user.id, betAmount, currency);
+                    const updatedWallet = await WalletService.deduct(user.id, betAmount, currency);
+
+                    // Emit real-time wallet update
+                    aviator.to(`user:${user.id}`).emit('wallet_update', {
+                        currency,
+                        newBalance: updatedWallet.balance,
+                        type: 'bet',
+                        amount: betAmount
+                    });
                 } catch (e) {
                     return callback({
                         success: false,
@@ -191,7 +199,16 @@ module.exports = (aviator) => {
                 bet.payout = result.payout;
 
                 // Credit winnings
-                await WalletService.credit(user.id, result.payout, bet.currency);
+                const updatedWallet = await WalletService.credit(user.id, result.payout, bet.currency);
+
+                // Emit real-time wallet update
+                aviator.to(`user:${user.id}`).emit('wallet_update', {
+                    currency: bet.currency,
+                    newBalance: updatedWallet.balance,
+                    type: 'win',
+                    amount: result.payout,
+                    message: `Nice! You cashed out at ${currentMultiplier}x and won ${result.payout}!`
+                });
 
                 // Log win transaction
                 await supabase.from('transactions').insert({
@@ -320,7 +337,16 @@ module.exports = (aviator) => {
                 bet.payout = result.payout;
 
                 // Credit winnings
-                await WalletService.credit(bet.userId, result.payout, bet.currency);
+                const updatedWallet = await WalletService.credit(bet.userId, result.payout, bet.currency);
+
+                // Emit real-time wallet update
+                aviator.to(`user:${bet.userId}`).emit('wallet_update', {
+                    currency: bet.currency,
+                    newBalance: updatedWallet.balance,
+                    type: 'win',
+                    amount: result.payout,
+                    message: `Auto Cashout! You won ${result.payout} at ${bet.autoCashout}x!`
+                });
 
                 // Log win transaction
                 await supabase.from('transactions').insert({

@@ -13,13 +13,13 @@ export default function Home() {
         {
             name: "Coinflip",
             description: "Heads or Tails? Flip the golden coin and double your money instantly.",
-            image: "/games/dice.png",
+            image: "/games/coinflip.png",
             path: "/games/coinflip"
         },
         {
             name: "Wheel",
             description: "Spin the wheel of fortune with customizable risk and win up to 50x.",
-            image: "/games/dice.png",
+            image: "/games/wheel.png",
             path: "/games/wheel"
         },
         {
@@ -45,6 +45,18 @@ export default function Home() {
             description: "Spin the reels for massive jackpots and bonus features.",
             image: "/games/slot.png",
             path: "/games/slots"
+        },
+        {
+            name: "Baccarat",
+            description: "Punto Banco - predict if the Player or Banker will get closer to 9.",
+            image: "/games/baccarat.png",
+            path: "/games/baccarat"
+        },
+        {
+            name: "Blackjack",
+            description: "Beat the dealer by getting closer to 21 without busting.",
+            image: "/games/blackjack.png",
+            path: "/games/blackjack"
         }
     ]
 

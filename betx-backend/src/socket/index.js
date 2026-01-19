@@ -35,7 +35,7 @@ module.exports = (io) => {
     const aviatorNamespace = io.of('/aviator');
     const chatNamespace = io.of('/chat');
 
-    // Apply auth to all namespaces
+    // Apply auth to all namespaces and join user room
     [
         diceNamespace,
         crashNamespace,
@@ -48,8 +48,11 @@ module.exports = (io) => {
         aviatorNamespace,
         chatNamespace
     ].forEach(
-        (namespace) => {
-            namespace.use(socketAuth);
+        (ns) => {
+            ns.use(socketAuth);
+            ns.on('connection', (socket) => {
+                socket.join(`user:${socket.userId}`);
+            });
         }
     );
 
@@ -64,10 +67,29 @@ module.exports = (io) => {
     require('./namespaces/keno')(kenoNamespace);
     require('./namespaces/aviator')(aviatorNamespace);
 
+    // Baccarat
+    const baccaratNamespace = io.of('/baccarat');
+    baccaratNamespace.use(socketAuth);
+    baccaratNamespace.on('connection', (socket) => {
+        socket.join(`user:${socket.userId}`);
+    });
+    require('./namespaces/baccarat')(baccaratNamespace);
+
     // Color Prediction (New)
     const colorPredictionNamespace = io.of('/color-prediction');
     colorPredictionNamespace.use(socketAuth);
+    colorPredictionNamespace.on('connection', (socket) => {
+        socket.join(`user:${socket.userId}`);
+    });
     require('./namespaces/color-prediction')(colorPredictionNamespace);
+
+    // Blackjack (New)
+    const blackjackNamespace = io.of('/blackjack');
+    blackjackNamespace.use(socketAuth);
+    blackjackNamespace.on('connection', (socket) => {
+        socket.join(`user:${socket.userId}`);
+    });
+    require('./namespaces/blackjack')(blackjackNamespace);
 
     logger.info('✅ Socket.IO namespaces initialized');
 };

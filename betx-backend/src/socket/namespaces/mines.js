@@ -99,7 +99,15 @@ module.exports = (mines) => {
 
                 // Deduct bet amount
                 try {
-                    await WalletService.deduct(user.id, betAmount, currency);
+                    const updatedWallet = await WalletService.deduct(user.id, betAmount, currency);
+
+                    // Emit real-time wallet update
+                    mines.to(`user:${user.id}`).emit('wallet_update', {
+                        currency,
+                        newBalance: updatedWallet.balance,
+                        type: 'bet',
+                        amount: betAmount
+                    });
                 } catch (e) {
                     return callback({
                         success: false,
@@ -220,13 +228,22 @@ module.exports = (mines) => {
                 const result = MinesService.cashoutMines(gameState);
 
                 // Credit winnings
-                await WalletService.credit(user.id, result.payout, gameState.currency);
+                const updatedWallet = await WalletService.credit(user.id, result.payout, gameState.currency);
+
+                // Emit real-time wallet update
+                mines.to(`user:${user.id}`).emit('wallet_update', {
+                    currency: gameState.currency,
+                    newBalance: updatedWallet.balance,
+                    type: 'win',
+                    amount: result.payout,
+                    message: `Victory! You cashed out for ${result.payout}!`
+                });
 
                 // End game
                 await endMinesGame(user.id, { ...gameState, ...result }, true);
                 activeGames.delete(user.id);
 
-                const balance = await WalletService.getBalance(user.id, gameState.currency);
+                const balance = updatedWallet.balance;
 
                 logger.info(`Mines cashout: ${user.username} | Payout: ${result.payout}`);
 
